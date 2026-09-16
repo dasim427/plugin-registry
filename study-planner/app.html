@@ -311,6 +311,7 @@ dialog h2{font-size:19px}
   <footer class="foot">
     Планировщик разносит каждое задание на сессии по 30 мин – 2,5 ч так, чтобы успеть к сроку и не занимать день целиком.
     Дневная норма настраивается отдельно для каждого дня недели.
+    <span id="buildStamp" class="mono"></span>
   </footer>
 </div>
 
@@ -2044,6 +2045,11 @@ function reminderTick(){
 
 /* ====================== старт ====================== */
 (function start(){
+  /* дату сборки проставляет build.mjs — в артефакте её нет, и строка остаётся пустой */
+  const built = document.querySelector('meta[name="build-date"]');
+  const stamp = document.getElementById("buildStamp");
+  if (built && stamp) stamp.textContent = "Сборка от " + built.content.split("-").reverse().join(".");
+
   if (notifySupported()){
     try { state.notifyState = Notification.permission; } catch (e) { state.notifyState = "unsupported"; }
   } else state.notifyState = "unsupported";

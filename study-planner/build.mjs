@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const body = await readFile(join(here, "app.html"), "utf8");
+const buildDate = new Date().toISOString().slice(0, 10);
 
 const page = `<!doctype html>
 <html lang="ru">
@@ -19,6 +20,7 @@ const page = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Без снежного кома</title>
 <meta name="description" content="Планировщик учебных заданий: разносит работу по свободным окнам между парами.">
+<meta name="build-date" content="${buildDate}">
 <meta name="theme-color" content="#eceee7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#13161b" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
