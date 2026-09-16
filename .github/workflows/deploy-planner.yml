@@ -1,0 +1,66 @@
+name: Deploy planner
+
+on:
+  push:
+    branches:
+      - master
+      - 'claude/task-manager-assignments-pbatfp'
+    paths:
+      - 'study-planner/**'
+      - '.github/workflows/deploy-planner.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-planner
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and publish to gh-pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build standalone page
+        working-directory: study-planner
+        run: node build.mjs
+
+      - name: Publish to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Ветка сайта содержит ровно два файла, поэтому коммит собирается
+          # напрямую из объектов — без переключения веток и рабочего дерева.
+          page=$(git hash-object -w study-planner/index.html)
+          nojekyll=$(printf '' | git hash-object -w --stdin)
+          tree=$(printf "100644 blob %s\tindex.html\n100644 blob %s\t.nojekyll\n" "$page" "$nojekyll" | git mktree)
+
+          parent=""
+          if git fetch --depth=1 origin gh-pages 2>/dev/null; then
+            parent=$(git rev-parse FETCH_HEAD)
+          fi
+
+          if [ -n "$parent" ] && [ "$(git rev-parse "$parent^{tree}")" = "$tree" ]; then
+            echo "Страница не изменилась — публиковать нечего."
+            exit 0
+          fi
+
+          message="Deploy planner from ${GITHUB_SHA:0:7}"
+          if [ -n "$parent" ]; then
+            commit=$(git commit-tree "$tree" -p "$parent" -m "$message")
+          else
+            commit=$(git commit-tree "$tree" -m "$message")
+          fi
+
+          git push origin "$commit:refs/heads/gh-pages"
+          echo "Опубликовано: $commit"
