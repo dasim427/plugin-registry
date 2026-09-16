@@ -213,6 +213,8 @@ main{padding-top:22px;display:flex;flex-direction:column;gap:26px}
   padding:11px 15px;border:1px dashed var(--line-strong);border-radius:10px;color:var(--ink-2);
 }
 .tl-class.past{opacity:.5}
+.tl-class.soft{border-style:dotted;opacity:.75}
+.wchip.soft{opacity:.6;font-style:italic}
 .tl-time{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 @media (max-width:620px){.tl-class{grid-template-columns:1fr;gap:4px}}
 .block-meta{margin-top:5px;font-size:12.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -601,6 +603,7 @@ function freeWindows(dateStr, settings){
   let windows = till > from ? [[from, till]] : [];
 
   for (const c of classesFor(dateStr, settings)){
+    if (c.soft) continue; /* сам. работа время не занимает */
     const busy = [toMin(c.start) - gap, toMin(c.end) + gap];
     const next = [];
     for (const w of windows){
@@ -1093,10 +1096,15 @@ function parseICS(text){
     const s = icsDate(fs.value), e = fe ? icsDate(fe.value) : null;
     if (!s || s.allDay) continue;
 
-    const summary = (field("SUMMARY") || {value: "Пара"}).value
-      .replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\n/gi, " ").trim();
-    const location = (field("LOCATION") || {value: ""}).value
-      .replace(/\\,/g, ",").replace(/\\n/gi, " ").trim();
+    const unescape = s => String(s).replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\n/gi, " ").trim();
+    const summary = unescape((field("SUMMARY") || {value: "Пара"}).value);
+    const location = unescape((field("LOCATION") || {value: ""}).value);
+    const description = unescape((field("DESCRIPTION") || {value: ""}).value);
+    /* «1 пара · лекция · А-301 · В-78» — второй кусок это тип занятия */
+    const kind = (description.split("·")[1] || "").trim();
+    /* самостоятельная работа стоит в расписании, но аудиторию не занимает —
+       это как раз то время, в которое и делаются задания */
+    const soft = /сам\.?\s*работ|самостоятельн|individual/i.test(description);
     const startMin = s.min;
     const endMin = e ? (e.date === s.date ? e.min : 24 * 60 - 1) : s.min + 90;
 
@@ -1127,14 +1135,17 @@ function parseICS(text){
     for (const d of dates){
       if (d < horizonFrom || d > horizonTo) continue;
       if (exdates.includes(d)) continue;
-      items.push({
+      const item = {
         date: d,
         day: wdIndex(d),
         start: fromMin(startMin),
         end: fromMin(endMin),
         title: summary || "Пара",
         place: location
-      });
+      };
+      if (kind) item.kind = kind;
+      if (soft) item.soft = true;
+      items.push(item);
     }
   }
   return items;
@@ -1250,12 +1261,14 @@ function blockCardHTML(block){
 }
 
 function classRowHTML(c){
-  const done = c.day === wdIndex(todayISO()) && toMin(c.end) < nowMin();
-  return '<div class="tl-class' + (done ? " past" : "") + '">' +
+  const past = toMin(c.end) < nowMin();
+  return '<div class="tl-class' + (past ? " past" : "") + (c.soft ? " soft" : "") + '">' +
     '<span class="tl-time">' + fmtSpan(toMin(c.start), toMin(c.end)) + "</span>" +
     "<span><strong>" + esc(c.title) + "</strong>" +
       (c.place ? ' <span class="muted">· ' + esc(c.place) + "</span>" : "") +
-      ' <span class="tag" style="margin-left:6px">пара</span></span>' +
+      ' <span class="tag" style="margin-left:6px">' + esc(c.kind || "пара") + "</span>" +
+      (c.soft ? ' <span class="muted">время свободно</span>' : "") +
+    "</span>" +
   "</div>";
 }
 function renderToday(plan){
@@ -1263,13 +1276,14 @@ function renderToday(plan){
   const blocks = today ? today.blocks : [];
   const freeToday = today ? Math.max(0, today.cap - today.used) : 0;
   const classes = classesFor(plan.start, state.settings);
+  const real = classes.filter(c => !c.soft);
 
   let html = '<section>' +
     '<div class="spread dayhead">' +
       '<div><p class="eyebrow">Сегодня</p><h2>' + fmtDateFull(plan.start) + "</h2></div>" +
-      (classes.length
-        ? '<p class="muted mono" style="font-size:12.5px">' + classes.length + " " + plural(classes.length, "пара", "пары", "пар") +
-          " · " + fmtSpan(toMin(classes[0].start), toMin(classes[classes.length - 1].end)) + "</p>"
+      (real.length
+        ? '<p class="muted mono" style="font-size:12.5px">' + real.length + " " + plural(real.length, "пара", "пары", "пар") +
+          " · " + fmtSpan(toMin(real[0].start), toMin(real[real.length - 1].end)) + "</p>"
         : '<p class="muted mono" style="font-size:12.5px">пар нет</p>') +
     "</div>" +
     (today ? meterHTML(today) : "") +
@@ -1321,14 +1335,17 @@ function weekRowHTML(day, showToday){
       : "color-mix(in srgb,var(--accent) 48%,var(--surface))") + '"></i>').join("");
   const free = Math.max(0, cap - day.used);
   const bar = '<div class="wbar">' + bars + (free > 0.05 ? '<i style="flex:' + free + ';background:transparent"></i>' : "") + "</div>";
-  const classes = classesFor(day.date, state.settings);
+  const classes = classesFor(day.date, state.settings).filter(c => !c.soft);
   const chips = day.blocks.length
     ? day.blocks.map(b => '<span class="wchip">' + (b.slots && b.slots.length ? fmtSpan(b.slots[0][0], b.slots[0][1]) + " " : "") +
         esc(shortSubject(b.task)) + " · " + fmtHours(b.hours) + "</span>").join("")
     : '<span class="wfree">' + (cap > 0 ? "свободный день" : "выходной") + "</span>";
   return '<div class="wday' + (isToday && showToday ? " today" : "") + (cap <= 0 ? " off" : "") + '">' +
     '<div class="wname"><b>' + WD[wdIndex(day.date)] + ", " + fmtDate(day.date) + "</b>" +
-      (classes.length ? classes.length + " " + plural(classes.length, "пара", "пары", "пар") + " до " + fromMin(toMin(classes[classes.length - 1].end)) + "<br>" : "") +
+      (classes.length
+        ? classes.length + " " + plural(classes.length, "пара", "пары", "пар") + " " +
+          fmtSpan(toMin(classes[0].start), toMin(classes[classes.length - 1].end)) + "<br>"
+        : "") +
       (cap > 0 ? "норма " + fmtHours(cap) : "выходной") + "</div>" +
     '<div class="wtrack">' + bar + '<div class="wchips">' + chips +
       (day.blocks.length && free > 0.05 ? '<span class="wfree">свободно ' + fmtHours(free) + "</span>" : "") +
@@ -1479,14 +1496,15 @@ function renderSchedule(){
       (weekNumber(today, state.settings) % 2 ? "числитель" : "знаменатель") + ").</p>" +
       '<div class="week">' + week.map(date => {
       const dayClasses = classesFor(date, state.settings);
+      const realClasses = dayClasses.filter(c => !c.soft);
       const free = freeWindows(date, state.settings);
       return '<div class="wday' + (date === today ? " today" : "") + '">' +
         '<div class="wname"><b>' + WD[wdIndex(date)] + ", " + fmtDate(date) + "</b>" +
-          (dayClasses.length ? dayClasses.length + " " + plural(dayClasses.length, "пара", "пары", "пар") : "пар нет") + "</div>" +
+          (realClasses.length ? realClasses.length + " " + plural(realClasses.length, "пара", "пары", "пар") : "пар нет") + "</div>" +
         '<div class="wtrack">' +
           (dayClasses.length
             ? '<div class="wchips">' + dayClasses.map(c =>
-                '<span class="wchip">' + fmtSpan(toMin(c.start), toMin(c.end)) + " " + esc(c.title) +
+                '<span class="wchip' + (c.soft ? " soft" : "") + '">' + fmtSpan(toMin(c.start), toMin(c.end)) + " " + esc(c.title) +
                 (parityLabel(c) && !c.date ? ' <span class="muted">' + parityLabel(c) + "</span>" : "") +
                 '<button class="btn ghost tiny" data-act="class-edit" data-cid="' + esc(c.id) + '" style="padding:0 4px;margin-left:4px">✎</button>' +
                 '<button class="btn ghost tiny" data-act="class-del" data-cid="' + esc(c.id) + '" style="padding:0 4px">✕</button>' +
