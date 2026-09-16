@@ -383,12 +383,20 @@ dialog h2{font-size:19px}
     <div class="grid2">
       <div class="field">
         <label for="c-start">Начало</label>
-        <input type="time" id="c-start" required value="08:30">
+        <input type="time" id="c-start" required value="09:00">
       </div>
       <div class="field">
         <label for="c-end">Конец</label>
-        <input type="time" id="c-end" required value="10:05">
+        <input type="time" id="c-end" required value="10:30">
       </div>
+    </div>
+    <div class="field">
+      <label for="c-parity">Как часто</label>
+      <select id="c-parity">
+        <option value="all">Каждую неделю</option>
+        <option value="odd">По нечётным неделям — числитель</option>
+        <option value="even">По чётным неделям — знаменатель</option>
+      </select>
     </div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger" id="c-delete" hidden>Удалить</button>
@@ -429,8 +437,21 @@ const DEFAULT_SETTINGS = {
   schedule: [],
   dayStart: "09:00",
   dayEnd: "22:00",
-  gap: 20
+  gap: 20,
+  lessonTimes: null,   /* сетка звонков; null — значения по умолчанию */
+  semesterStart: ""    /* дата начала семестра, от неё считается номер недели */
 };
+
+/* Сетка пар РТУ МИРЭА. Меняется в настройках — у разных корпусов бывает своя. */
+const DEFAULT_LESSON_TIMES = [
+  ["09:00", "10:30"],
+  ["10:40", "12:10"],
+  ["12:40", "14:10"],
+  ["14:20", "15:50"],
+  ["16:20", "17:50"],
+  ["18:00", "19:30"],
+  ["19:40", "21:10"]
+];
 
 const TABS = [
   {id:"today",    label:"Сегодня"},
@@ -520,10 +541,44 @@ const q = x => Math.round(x * 4) / 4;
 const remaining = t => Math.max(0, (Number(t.hours) || 0) - (Number(t.done) || 0));
 
 /* ====================== расписание пар ====================== */
+function lessonTimes(settings){
+  const t = settings && settings.lessonTimes;
+  return Array.isArray(t) && t.length ? t : DEFAULT_LESSON_TIMES;
+}
+function defaultSemesterStart(){
+  const now = new Date();
+  const y = now.getFullYear();
+  if (now.getMonth() >= 7) return y + "-09-01";          /* осенний семестр */
+  if (now.getMonth() <= 0) return (y - 1) + "-09-01";    /* январь — всё ещё осенний */
+  return y + "-02-09";                                    /* весенний */
+}
+/* номер учебной недели: по нему различаются числитель и знаменатель */
+function weekNumber(dateStr, settings){
+  const startISO = (settings && settings.semesterStart) || defaultSemesterStart();
+  const start = parseISO(startISO);
+  const startMonday = addDays(iso(start), -((start.getDay() + 6) % 7));
+  return Math.floor(dayDiff(startMonday, dateStr) / 7) + 1;
+}
 function classesFor(dateStr, settings){
+  const wd = wdIndex(dateStr);
+  const wk = weekNumber(dateStr, settings);
   return (settings.schedule || [])
-    .filter(c => c.day === wdIndex(dateStr))
+    .filter(c => {
+      if (c.date) return c.date === dateStr;          /* занятие на конкретную дату (из .ics) */
+      if (c.day !== wd) return false;
+      if (Array.isArray(c.weeks) && c.weeks.length) return c.weeks.includes(wk);
+      if (c.parity === "odd") return wk % 2 === 1;    /* числитель */
+      if (c.parity === "even") return wk % 2 === 0;   /* знаменатель */
+      return true;
+    })
     .sort((a, b) => toMin(a.start) - toMin(b.start));
+}
+function parityLabel(c){
+  if (c.date) return fmtDate(c.date);
+  if (Array.isArray(c.weeks) && c.weeks.length) return "недели " + c.weeks.join(",");
+  if (c.parity === "odd") return "числитель";
+  if (c.parity === "even") return "знаменатель";
+  return "";
 }
 /* свободные окна дня в минутах: день минус пары минус дорога/перерыв */
 function freeWindows(dateStr, settings){
@@ -899,48 +954,177 @@ const DAY_WORDS = [
   ["субботам","суббота","субботу","сб","saturday","sat"],
   ["воскресеньям","воскресенье","вс","sunday","sun"]
 ];
-function parseSchedLine(line){
-  let rest = " " + line.trim() + " ";
-  let start = null, end = null;
-
-  let m = rest.match(/(\d{1,2})[:.](\d{2})\s*(?:[-–—]|до)\s*(\d{1,2})[:.](\d{2})/);
-  if (m){
-    start = (+m[1]) * 60 + (+m[2]);
-    end = (+m[3]) * 60 + (+m[4]);
-    rest = rest.replace(m[0], " ");
-  } else {
-    m = rest.match(/(\d{1,2})[:.](\d{2})/);
-    if (m){
-      start = (+m[1]) * 60 + (+m[2]);
-      end = start + 95; /* стандартная пара 1 ч 35 мин */
-      rest = rest.replace(m[0], " ");
-    }
-  }
-
+function matchDays(text){
   const days = [];
+  let rest = text;
   for (let i = 0; i < DAY_WORDS.length; i++){
     for (const w of DAY_WORDS[i]){
       const re = new RegExp("(^|[\\s,;|/(])" + w + "(?=[\\s,;|/.)]|$)", "i");
       if (re.test(rest)){ days.push(i); rest = rest.replace(re, "$1 "); break; }
     }
   }
+  return {days, rest};
+}
+/* строка, в которой кроме дня недели ничего нет — заголовок дня в расписании */
+function dayHeaderIndex(line){
+  const clean = line.replace(/[,:—–-]/g, " ").replace(/\d+[.\/]\d+([.\/]\d+)?/g, " ").trim();
+  if (!clean || clean.split(/\s+/).length > 2) return null;
+  const {days, rest} = matchDays(" " + clean + " ");
+  return days.length === 1 && !rest.trim() ? days[0] : null;
+}
+function parseSchedLine(line, times){
+  let rest = " " + line.trim() + " ";
+  let start = null, end = null;
+
+  /* «3 пара» — время берётся из сетки звонков */
+  const mp = rest.match(/(\d)\s*(?:-?[ая]я?)?\s*пар[аы]/i);
+  if (mp){
+    const slot = times[(+mp[1]) - 1];
+    if (slot){ start = toMin(slot[0]); end = toMin(slot[1]); }
+    rest = rest.replace(mp[0], " ");
+  }
+
+  /* явное время перекрывает номер пары */
+  let m = rest.match(/(\d{1,2})[:.](\d{2})\s*(?:[-–—]|до)\s*(\d{1,2})[:.](\d{2})/);
+  if (m){
+    start = (+m[1]) * 60 + (+m[2]);
+    end = (+m[3]) * 60 + (+m[4]);
+    rest = rest.replace(m[0], " ");
+  } else if (start == null){
+    m = rest.match(/(\d{1,2})[:.](\d{2})/);
+    if (m){
+      start = (+m[1]) * 60 + (+m[2]);
+      end = start + 90;
+      rest = rest.replace(m[0], " ");
+    }
+  }
+
+  const dm = matchDays(rest);
+  const days = dm.days;
+  rest = dm.rest;
+
+  /* числитель/знаменатель и перечисление недель */
+  let parity = "all", weeks = [];
+  const mw = rest.match(/(\d+(?:\s*[,;]\s*\d+)+)\s*(?:недел[а-яё]*|нед\.?)/i);
+  if (mw){
+    weeks = mw[1].split(/[,;]/).map(s => parseInt(s, 10)).filter(n => n > 0 && n < 30);
+    rest = rest.replace(mw[0], " ");
+  } else {
+    const mNe = rest.match(/(?:^|\s)(?:по\s+)?(?:неч[её]тн|числител)[а-яё]*/i);
+    const mCh = rest.match(/(?:^|\s)(?:по\s+)?(?:ч[её]тн|знаменател)[а-яё]*/i);
+    if (mNe){ parity = "odd"; rest = rest.replace(mNe[0], " "); }
+    else if (mCh){ parity = "even"; rest = rest.replace(mCh[0], " "); }
+  }
 
   let place = "";
-  const mp = rest.match(/(?:ауд\.?|каб\.?|аудитория|room)\s*№?\s*([-\w\d\/а-яё]+)/i);
-  if (mp){ place = mp[0].trim(); rest = rest.replace(mp[0], " "); }
+  const ma = rest.match(/(?:ауд\.?|каб\.?|аудитория|room)\s*№?\s*([-\w\d\/а-яё]+)/i) ||
+             rest.match(/(?:^|\s)([А-ЯA-Z]-\d{2,4}[а-яa-z]?)(?=\s|$)/);
+  if (ma){ place = ma[0].trim(); rest = rest.replace(ma[0], " "); }
+
+  /* преподаватель: Иванов И.И. */
+  rest = rest.replace(/[А-ЯЁ][а-яё]+\s+[А-ЯЁ]\.\s?[А-ЯЁ]\./g, " ");
+  /* календарная дата рядом с днём недели названию не нужна */
+  rest = rest.replace(/(^|\s)\d{1,2}[.\/]\d{1,2}(?:[.\/]\d{2,4})?(?=\s|$)/g, " ");
 
   const title = cleanup(rest.replace(/[|,;]+/g, " ").replace(/\s{2,}/g, " "));
   return {
-    days, start, end, place,
+    days, start, end, place, parity, weeks,
     title: title || "Пара",
     ok: days.length > 0 && start != null && end > start
   };
 }
-function parseSchedule(text){
-  return text.split(/\r?\n/)
-    .map(l => l.trim())
-    .filter(l => l && !l.startsWith("#"))
-    .map(parseSchedLine);
+function parseSchedule(text, settings){
+  const times = lessonTimes(settings);
+  const rows = [];
+  let currentDay = null;
+  for (const raw of text.split(/\r?\n/)){
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const header = dayHeaderIndex(line);
+    if (header != null){ currentDay = header; continue; }
+    const r = parseSchedLine(line, times);
+    if (!r.days.length && currentDay != null) r.days = [currentDay];
+    r.ok = r.days.length > 0 && r.start != null && r.end > r.start;
+    rows.push(r);
+  }
+  return rows;
+}
+
+/* ---- разбор календаря .ics (экспорт из приложения или Google Календаря) ---- */
+function icsDate(value, params){
+  const m = String(value).match(/(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?/);
+  if (!m) return null;
+  const allDay = !m[4];
+  if (m[7]){ /* UTC — переводим в местное время */
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6] || 0));
+    return {date: iso(d), min: d.getHours() * 60 + d.getMinutes(), allDay};
+  }
+  const d = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+  return {date: iso(d), min: allDay ? 0 : (+m[4]) * 60 + (+m[5]), allDay};
+}
+function parseICS(text){
+  const unfolded = String(text).replace(/\r\n[ \t]/g, "").replace(/\n[ \t]/g, "");
+  const chunks = unfolded.split(/BEGIN:VEVENT/i).slice(1);
+  const items = [];
+  const horizonFrom = addDays(todayISO(), -7);
+  const horizonTo = addDays(todayISO(), 200);
+
+  for (const chunk of chunks){
+    const body = chunk.split(/END:VEVENT/i)[0];
+    const field = name => {
+      const m = body.match(new RegExp("^" + name + "([^:\\r\\n]*):(.*)$", "mi"));
+      return m ? {params: m[1], value: m[2].trim()} : null;
+    };
+    const fs = field("DTSTART"), fe = field("DTEND");
+    if (!fs) continue;
+    const s = icsDate(fs.value), e = fe ? icsDate(fe.value) : null;
+    if (!s || s.allDay) continue;
+
+    const summary = (field("SUMMARY") || {value: "Пара"}).value
+      .replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\n/gi, " ").trim();
+    const location = (field("LOCATION") || {value: ""}).value
+      .replace(/\\,/g, ",").replace(/\\n/gi, " ").trim();
+    const startMin = s.min;
+    const endMin = e ? (e.date === s.date ? e.min : 24 * 60 - 1) : s.min + 90;
+
+    const exdates = [];
+    const exRe = /^EXDATE[^:\r\n]*:(.*)$/gim;
+    let ex;
+    while ((ex = exRe.exec(body))) for (const part of ex[1].split(",")){
+      const d = icsDate(part.trim());
+      if (d) exdates.push(d.date);
+    }
+
+    const dates = [s.date];
+    const rrule = field("RRULE");
+    if (rrule && /FREQ=WEEKLY/i.test(rrule.value)){
+      const until = (rrule.value.match(/UNTIL=([0-9TZ]+)/i) || [])[1];
+      const count = parseInt((rrule.value.match(/COUNT=(\d+)/i) || [])[1], 10);
+      const interval = parseInt((rrule.value.match(/INTERVAL=(\d+)/i) || [])[1], 10) || 1;
+      const untilDate = until ? (icsDate(until) || {}).date : null;
+      let cursor = s.date;
+      for (let k = 1; k < (count || 60); k++){
+        cursor = addDays(cursor, 7 * interval);
+        if (untilDate && cursor > untilDate) break;
+        if (cursor > horizonTo) break;
+        dates.push(cursor);
+      }
+    }
+
+    for (const d of dates){
+      if (d < horizonFrom || d > horizonTo) continue;
+      if (exdates.includes(d)) continue;
+      items.push({
+        date: d,
+        day: wdIndex(d),
+        start: fromMin(startMin),
+        end: fromMin(endMin),
+        title: summary || "Пара",
+        place: location
+      });
+    }
+  }
+  return items;
 }
 
 /* ====================== отрисовка ====================== */
@@ -1265,7 +1449,9 @@ function renderSchedule(){
   const rows = state.schedRows;
   const today = todayISO();
 
-  let html = '<section><div class="spread" style="margin-bottom:12px">' +
+  let html = "<section>" +
+    (errorNote ? '<div class="notice bad" style="margin-bottom:12px"><i class="n-mark"></i><div class="n-body">' + esc(errorNote) + "</div></div>" : "") +
+    '<div class="spread" style="margin-bottom:12px">' +
     '<div><p class="eyebrow">Расписание пар</p>' +
     '<h2 style="font-size:23px">' + (sched.length
       ? sched.length + " " + plural(sched.length, "пара", "пары", "пар") + " в неделю"
@@ -1273,20 +1459,25 @@ function renderSchedule(){
     '<div class="row"><button class="btn" data-act="class-new">+ Пара</button></div></div>';
 
   if (sched.length){
-    html += '<div class="week">' + WD.map((wd, i) => {
-      const dayClasses = sched.filter(c => c.day === i).sort((a, b) => toMin(a.start) - toMin(b.start));
-      const dateForDay = (() => { let d = today; for (let k = 0; k < 7; k++){ if (wdIndex(d) === i) return d; d = addDays(d, 1); } return today; })();
-      const free = freeWindows(dateForDay, state.settings);
-      return '<div class="wday' + (wdIndex(today) === i ? " today" : "") + '">' +
-        '<div class="wname"><b>' + WD_FULL[i][0].toUpperCase() + WD_FULL[i].slice(1) + "</b>" +
+    const week = [];
+    for (let k = 0; k < 7; k++) week.push(addDays(today, k));
+    html += '<p class="muted" style="margin-bottom:8px">Ближайшая неделя. ' +
+      "Сегодня " + weekNumber(today, state.settings) + "-я учебная неделя (" +
+      (weekNumber(today, state.settings) % 2 ? "числитель" : "знаменатель") + ").</p>" +
+      '<div class="week">' + week.map(date => {
+      const dayClasses = classesFor(date, state.settings);
+      const free = freeWindows(date, state.settings);
+      return '<div class="wday' + (date === today ? " today" : "") + '">' +
+        '<div class="wname"><b>' + WD[wdIndex(date)] + ", " + fmtDate(date) + "</b>" +
           (dayClasses.length ? dayClasses.length + " " + plural(dayClasses.length, "пара", "пары", "пар") : "пар нет") + "</div>" +
         '<div class="wtrack">' +
           (dayClasses.length
             ? '<div class="wchips">' + dayClasses.map(c =>
                 '<span class="wchip">' + fmtSpan(toMin(c.start), toMin(c.end)) + " " + esc(c.title) +
+                (parityLabel(c) && !c.date ? ' <span class="muted">' + parityLabel(c) + "</span>" : "") +
                 '<button class="btn ghost tiny" data-act="class-edit" data-cid="' + esc(c.id) + '" style="padding:0 4px;margin-left:4px">✎</button>' +
                 '<button class="btn ghost tiny" data-act="class-del" data-cid="' + esc(c.id) + '" style="padding:0 4px">✕</button>' +
-                "</span>").join("")
+                "</span>").join("") + "</div>"
             : '<span class="wfree">весь день свободен</span>') +
           '<div class="wfree">окна для учёбы: ' + (free.length ? free.map(w => fmtSpan(w[0], w[1])).join(", ") : "нет") + "</div>" +
         "</div></div>";
@@ -1294,13 +1485,22 @@ function renderSchedule(){
   }
 
   html += '<div class="card" style="margin-top:16px">' +
-    '<h3 class="section-title">Загрузить расписание текстом</h3>' +
-    '<p class="muted" style="margin-bottom:12px;max-width:62ch">Одна строка — одна пара: ' +
-    '<span class="mono">Пн 8:30-10:05 Матанализ ауд. 305</span>. Понимаю «пн/понедельник», ' +
-    'несколько дней в строке (<span class="mono">Пн, Ср 12:00-13:35 Физика</span>) и время без конца — ' +
-    'тогда считаю пару в 1 ч 35 мин.</p>' +
+    '<h3 class="section-title">Из календаря — файлом .ics</h3>' +
+    '<p class="muted" style="margin-bottom:12px;max-width:62ch">Самый точный способ: если MIREA Ninja, «Пульс» или ваш календарь умеют выгрузить расписание файлом ' +
+    '<span class="mono">.ics</span> (или вы подписали на него Google Календарь и скачали оттуда) — берите его. ' +
+    'Тогда занятия встанут на конкретные даты, с числителем и знаменателем разбираться не нужно.</p>' +
+    '<div class="row"><input type="file" id="icsFile" accept=".ics,text/calendar" data-act="ics"></div>' +
+  "</div>";
+
+  html += '<div class="card">' +
+    '<h3 class="section-title">Или текстом — скопируйте расписание со страницы</h3>' +
+    '<p class="muted" style="margin-bottom:12px;max-width:62ch">Выделите расписание на ' +
+    '<span class="mono">pulse.mirea.ru/lessons</span> или в приложении, скопируйте и вставьте сюда как есть. ' +
+    'Понимаю «3 пара» (время возьму из сетки звонков в настройках), «09:00-10:30», день недели отдельной строкой-заголовком, ' +
+    '«по нечётным»/«числитель», «1,3,5,7 недели», аудитории вида <span class="mono">А-301</span>. ' +
+    'Фамилию преподавателя выброшу.</p>' +
     '<div class="field"><label for="schedBox">Расписание</label>' +
-    '<textarea id="schedBox" rows="8" placeholder="Пн 8:30-10:05 Матанализ ауд. 305&#10;Пн 10:15-11:50 Физика&#10;Вт, Чт 12:00-13:35 Программирование">' + esc(state.schedText) + "</textarea></div>" +
+    '<textarea id="schedBox" rows="9" placeholder="Понедельник&#10;1 пара 09:00-10:30 ЛК Математический анализ А-301 Иванов И.И.&#10;2 пара ПР Физика Б-105 по нечётным&#10;Вторник&#10;3 пара Программирование ауд. 112">' + esc(state.schedText) + "</textarea></div>" +
     '<div class="row" style="margin-top:12px">' +
       '<button class="btn primary" data-act="sched-parse">Разобрать</button>' +
       '<button class="btn" data-act="sched-sample">Вставить пример</button>' +
@@ -1308,17 +1508,25 @@ function renderSchedule(){
     "</div>";
 
   if (rows){
-    const good = rows.filter(r => r.ok);
-    const pairs = good.reduce((s, r) => s + r.days.length, 0);
+    const dated = rows.filter(r => r.date);
+    const pairs = dated.length || rows.filter(r => r.ok).reduce((s, r) => s + r.days.length, 0);
     html += '<div style="margin-top:16px"><div class="spread" style="margin-bottom:10px">' +
-      '<h3 class="section-title" style="margin:0">Разобрано: ' + pairs + " " + plural(pairs, "пара", "пары", "пар") + "</h3>" +
+      '<h3 class="section-title" style="margin:0">Разобрано: ' + pairs + " " + plural(pairs, "занятие", "занятия", "занятий") + "</h3>" +
       '<button class="btn primary" data-act="sched-commit"' + (pairs ? "" : " disabled") + ">Заменить расписание</button></div>" +
-      '<div class="scroll-x"><table class="preview"><thead><tr><th>Дни</th><th>Время</th><th>Пара</th><th>Место</th></tr></thead><tbody>' +
-      rows.map(r => '<tr class="' + (r.ok ? "" : "skip") + '">' +
-        '<td class="mono">' + (r.days.length ? r.days.map(d => WD[d]).join(", ") : '<span style="color:var(--danger)">нет дня</span>') + "</td>" +
-        '<td class="mono">' + (r.start != null ? fmtSpan(r.start, r.end) : '<span style="color:var(--danger)">нет времени</span>') + "</td>" +
+      '<div class="scroll-x"><table class="preview"><thead><tr><th>Когда</th><th>Время</th><th>Занятие</th><th>Место</th></tr></thead><tbody>' +
+      rows.slice(0, 60).map(r => '<tr class="' + (r.ok || r.date ? "" : "skip") + '">' +
+        '<td class="mono">' + (r.date
+            ? WD[wdIndex(r.date)] + " " + fmtDate(r.date)
+            : (r.days && r.days.length
+                ? r.days.map(d => WD[d]).join(", ") + (parityLabel(r) ? " · " + parityLabel(r) : "")
+                : '<span style="color:var(--danger)">нет дня</span>')) + "</td>" +
+        '<td class="mono">' + (r.date
+            ? esc(r.start) + "–" + esc(r.end)
+            : (r.start != null ? fmtSpan(r.start, r.end) : '<span style="color:var(--danger)">нет времени</span>')) + "</td>" +
         "<td>" + esc(r.title) + "</td><td>" + esc(r.place) + "</td></tr>").join("") +
-      "</tbody></table></div></div>";
+      "</tbody></table></div>" +
+      (rows.length > 60 ? '<p class="muted" style="margin-top:8px">Показаны первые 60 строк из ' + rows.length + ".</p>" : "") +
+      "</div>";
   }
   return html + "</div></section>";
 }
@@ -1360,6 +1568,20 @@ function renderSettings(){
       "</div>" +
       '<div class="field" style="margin-top:12px;max-width:220px"><label for="gapMin">Зазор вокруг пары, мин</label>' +
         '<input type="number" id="gapMin" min="0" max="120" step="5" value="' + (Number(s.gap) || 0) + '" data-act="gap"></div>' +
+    "</div>" +
+    '<div class="card">' +
+      '<h3 class="section-title">Сетка звонков и семестр</h3>' +
+      '<p class="muted" style="margin-bottom:12px">По этим временам разбирается «3 пара» при вставке расписания текстом. ' +
+      'Значения по умолчанию — общая сетка РТУ МИРЭА; сверьтесь со своим корпусом, бывает иначе.</p>' +
+      '<div class="cap-grid" style="grid-template-columns:repeat(4,1fr)">' + lessonTimes(s).map((slot, i) =>
+        '<div class="cap-day"><span>' + (i + 1) + "-я пара</span>" +
+        '<input type="time" id="lt-s' + i + '" value="' + esc(slot[0]) + '" data-act="lesson-time" data-i="' + i + '" data-edge="0">' +
+        '<input type="time" id="lt-e' + i + '" value="' + esc(slot[1]) + '" data-act="lesson-time" data-i="' + i + '" data-edge="1">' +
+        "</div>").join("") + "</div>" +
+      '<div class="field" style="margin-top:14px;max-width:260px"><label for="semStart">Начало семестра</label>' +
+        '<input type="date" id="semStart" value="' + esc(s.semesterStart || defaultSemesterStart()) + '" data-act="semstart"></div>' +
+      '<p class="muted" style="margin-top:8px">От этой даты считается номер учебной недели — по нему различаются числитель и знаменатель. ' +
+      "Сейчас идёт " + weekNumber(todayISO(), s) + "-я неделя (" + (weekNumber(todayISO(), s) % 2 ? "числитель" : "знаменатель") + ").</p>" +
     "</div>" +
     '<div class="card">' +
       '<h3 class="section-title">Напоминание</h3>' +
@@ -1474,27 +1696,43 @@ view.addEventListener("click", async e => {
   if (act === "sched-parse"){
     const box = document.getElementById("schedBox");
     state.schedText = box ? box.value : "";
-    state.schedRows = parseSchedule(state.schedText);
+    state.schedRows = /BEGIN:VCALENDAR/i.test(state.schedText)
+      ? parseICS(state.schedText)
+      : parseSchedule(state.schedText, state.settings);
     return render();
   }
   if (act === "sched-sample"){
-    state.schedText = "Пн 8:30-10:05 Матанализ ауд. 305\n" +
-      "Пн 10:15-11:50 Физика\n" +
-      "Вт, Чт 12:00-13:35 Программирование ауд. 112\n" +
-      "Ср 14:00-15:35 История\n" +
-      "Пт 8:30-11:50 Английский";
+    state.schedText = "Понедельник\n" +
+      "1 пара ЛК Математический анализ А-301 Иванов И.И.\n" +
+      "2 пара ПР Физика Б-105 по нечётным\n" +
+      "Вторник\n" +
+      "3 пара Программирование ауд. 112\n" +
+      "4 пара ЛАБ Электроника А-208 1,3,5,7 недели\n" +
+      "Четверг\n" +
+      "09:00-10:30 Английский";
     state.schedRows = null;
     return render();
   }
   if (act === "sched-commit"){
-    const rows = (state.schedRows || []).filter(r => r.ok);
-    if (!rows.length) return;
+    const all = state.schedRows || [];
+    const dated = all.filter(r => r.date);
+    const weekly = all.filter(r => !r.date && r.ok);
+    if (!dated.length && !weekly.length) return;
     if ((state.settings.schedule || []).length &&
         !confirm("Заменить текущее расписание на новое?")) return;
-    const schedule = [];
-    for (const r of rows){
+
+    const schedule = dated.map(r => ({
+      id: newId(), date: r.date, day: r.day, start: r.start, end: r.end,
+      title: r.title, place: r.place || ""
+    }));
+    for (const r of weekly){
       for (const d of r.days){
-        schedule.push({id: newId(), day: d, start: fromMin(r.start), end: fromMin(r.end), title: r.title, place: r.place || ""});
+        const item = {
+          id: newId(), day: d, start: fromMin(r.start), end: fromMin(r.end),
+          title: r.title, place: r.place || "", parity: r.parity || "all"
+        };
+        if (Array.isArray(r.weeks) && r.weeks.length) item.weeks = r.weeks;
+        schedule.push(item);
       }
     }
     state.schedRows = null;
@@ -1553,7 +1791,31 @@ view.addEventListener("change", e => {
   if (el.dataset.act === "daystart") return putSettings({dayStart: el.value || "09:00"});
   if (el.dataset.act === "dayend") return putSettings({dayEnd: el.value || "22:00"});
   if (el.dataset.act === "gap") return putSettings({gap: Math.max(0, Math.min(120, parseInt(el.value, 10) || 0))});
+  if (el.dataset.act === "semstart") return putSettings({semesterStart: el.value || defaultSemesterStart()});
+  if (el.dataset.act === "lesson-time"){
+    const times = lessonTimes(state.settings).map(p => p.slice());
+    times[+el.dataset.i][+el.dataset.edge] = el.value || times[+el.dataset.i][+el.dataset.edge];
+    return putSettings({lessonTimes: times});
+  }
   if (el.dataset.act === "maxblock") return putSettings({maxBlock: Math.max(0.5, parseFloat(el.value) || 2.5)});
+  if (el.dataset.act === "ics"){
+    const file = el.files && el.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const items = parseICS(String(reader.result || ""));
+      if (!items.length){
+        errorNote = "В файле не нашлось занятий. Нужен файл .ics с событиями расписания.";
+        return render();
+      }
+      state.schedRows = items;
+      state.schedText = "";
+      render();
+    };
+    reader.onerror = () => { errorNote = "Не удалось прочитать файл."; render(); };
+    reader.readAsText(file, "utf-8");
+    return;
+  }
   if (el.dataset.act === "toggle-row"){
     const i = +el.dataset.i;
     if (el.checked) delete state.importSkipped[i]; else state.importSkipped[i] = true;
@@ -1688,8 +1950,9 @@ function openClassDialog(c){
   document.getElementById("c-title").value = c ? c.title : "";
   document.getElementById("c-place").value = c ? (c.place || "") : "";
   cDay.value = c ? c.day : wdIndex(todayISO());
-  document.getElementById("c-start").value = c ? c.start : "08:30";
-  document.getElementById("c-end").value = c ? c.end : "10:05";
+  document.getElementById("c-start").value = c ? c.start : lessonTimes(state.settings)[0][0];
+  document.getElementById("c-end").value = c ? c.end : lessonTimes(state.settings)[0][1];
+  document.getElementById("c-parity").value = c ? (c.parity || "all") : "all";
   document.getElementById("c-delete").hidden = !c;
   clsDlg.showModal();
   document.getElementById("c-title").focus();
@@ -1705,12 +1968,15 @@ clsForm.addEventListener("submit", e => {
   const end = document.getElementById("c-end").value;
   const title = document.getElementById("c-title").value.trim();
   if (!title || toMin(end) <= toMin(start)) return;
+  const previous = (state.settings.schedule || []).find(x => x.id === editingClassId);
   const item = {
     id: editingClassId || newId(),
     day: +cDay.value,
     start, end, title,
-    place: document.getElementById("c-place").value.trim()
+    place: document.getElementById("c-place").value.trim(),
+    parity: document.getElementById("c-parity").value
   };
+  if (previous && previous.date) item.date = previous.date;
   const list = (state.settings.schedule || []).filter(x => x.id !== item.id);
   list.push(item);
   clsDlg.close();
