@@ -496,6 +496,7 @@ const state = {
   tab: "today",
   filter: "active",
   usingDemo: false,
+  graves: [],
   importText: "",
   importRows: null,
   importSkipped: {},
@@ -747,7 +748,7 @@ function newId(){ return "t" + Date.now().toString(36) + Math.random().toString(
 
 function saveLocal(){
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({tasks: state.tasks, settings: state.settings}));
+    localStorage.setItem(LS_KEY, JSON.stringify({tasks: state.tasks, settings: state.settings, graves: state.graves}));
   } catch (e) { /* приватный режим — просто не сохраняем */ }
 }
 function loadLocal(){
@@ -756,17 +757,20 @@ function loadLocal(){
     if (!raw) return false;
     const data = JSON.parse(raw);
     if (Array.isArray(data.tasks)) state.tasks = data.tasks;
+    if (Array.isArray(data.graves)) state.graves = data.graves;
     if (data.settings) state.settings = {...DEFAULT_SETTINGS, ...data.settings};
     return state.tasks.length > 0;
   } catch (e) { return false; }
 }
 
 async function putTask(task){
+  task = {...task, updatedAt: nowStamp()};
   const i = state.tasks.findIndex(t => t.id === task.id);
   if (i >= 0) state.tasks[i] = task; else state.tasks.push(task);
   state.usingDemo = false;
   render();
   saveLocal();
+  schedulePush();
   if (db){
     const {id, ...body} = task;
     try { await db.doc("tasks/" + id).set(body); }
@@ -775,22 +779,237 @@ async function putTask(task){
 }
 async function dropTask(id){
   state.tasks = state.tasks.filter(t => t.id !== id);
+  /* след от удаления: иначе задание вернётся при синхронизации с другого устройства */
+  state.graves = (state.graves || []).filter(g => g.id !== id);
+  state.graves.push({id, deleted: true, updatedAt: nowStamp()});
   render();
   saveLocal();
+  schedulePush();
   if (db){
     try { await db.doc("tasks/" + id).delete(); }
     catch (e) { flashError(e, "Не удалось удалить задание в общем хранилище."); }
   }
 }
 async function putSettings(patch){
-  state.settings = {...state.settings, ...patch};
+  state.settings = {...state.settings, ...patch, updatedAt: nowStamp()};
   render();
   saveLocal();
+  schedulePush();
   if (db){
     try { await db.doc("settings/main").set(state.settings); }
     catch (e) { flashError(e, "Настройки сохранены только на этом устройстве."); }
   }
 }
+/* ====================== синхронизация через Supabase ======================
+   Работает там, где нет хранилища артефакта: на GitHub Pages и в файле с диска.
+   Библиотека не подключается — Supabase отдаёт обычный REST и Auth по HTTP. */
+const SB_CFG_KEY = "snowball.supabase.cfg";
+const SB_SESSION_KEY = "snowball.supabase.session";
+const SB_META_KEY = "snowball.supabase.meta";
+
+const Sync = {
+  cfg: null,        /* {url, key} */
+  session: null,    /* {access_token, refresh_token, expires_at, user_id, email} */
+  state: "off",     /* off | signed-out | ready | busy | error */
+  note: "",
+  lastSyncAt: "",
+  timer: null,
+  pushTimer: null
+};
+
+function lsGet(key){
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function lsSet(key, value){
+  try { value == null ? localStorage.removeItem(key) : localStorage.setItem(key, JSON.stringify(value)); }
+  catch (e) { /* приватный режим */ }
+}
+const nowStamp = () => new Date().toISOString();
+
+function syncEnabled(){ return !db && Sync.cfg && Sync.cfg.url && Sync.cfg.key; }
+function syncActive(){ return syncEnabled() && !!(Sync.session && Sync.session.access_token); }
+
+async function sbFetch(path, options = {}, allowRetry = true){
+  const base = String(Sync.cfg.url).replace(/\/+$/, "");
+  const headers = Object.assign({
+    apikey: Sync.cfg.key,
+    "Content-Type": "application/json"
+  }, options.headers || {});
+  if (Sync.session && Sync.session.access_token) headers.Authorization = "Bearer " + Sync.session.access_token;
+
+  const res = await fetch(base + path, Object.assign({}, options, {headers}));
+  if (res.status === 401 && allowRetry && Sync.session && Sync.session.refresh_token){
+    if (await sbRefresh()) return sbFetch(path, options, false);
+  }
+  return res;
+}
+function storeSession(data){
+  if (!data || !data.access_token) return false;
+  Sync.session = {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Date.now() + (Number(data.expires_in) || 3600) * 1000,
+    user_id: data.user ? data.user.id : (Sync.session && Sync.session.user_id),
+    email: data.user ? data.user.email : (Sync.session && Sync.session.email)
+  };
+  lsSet(SB_SESSION_KEY, Sync.session);
+  return true;
+}
+async function sbRefresh(){
+  try {
+    const res = await fetch(String(Sync.cfg.url).replace(/\/+$/, "") + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: {apikey: Sync.cfg.key, "Content-Type": "application/json"},
+      body: JSON.stringify({refresh_token: Sync.session.refresh_token})
+    });
+    if (!res.ok) throw new Error("refresh failed");
+    return storeSession(await res.json());
+  } catch (e){
+    Sync.session = null;
+    lsSet(SB_SESSION_KEY, null);
+    Sync.state = "signed-out";
+    Sync.note = "Сессия истекла — войдите снова.";
+    return false;
+  }
+}
+async function sbAuth(kind, email, password){
+  const path = kind === "signup" ? "/auth/v1/signup" : "/auth/v1/token?grant_type=password";
+  const base = String(Sync.cfg.url).replace(/\/+$/, "");
+  const res = await fetch(base + path, {
+    method: "POST",
+    headers: {apikey: Sync.cfg.key, "Content-Type": "application/json"},
+    body: JSON.stringify({email, password})
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok){
+    throw new Error(body.error_description || body.msg || body.message || ("Ошибка " + res.status));
+  }
+  if (!body.access_token){
+    /* регистрация с подтверждением почты: аккаунт создан, входа пока нет */
+    throw new Error("Аккаунт создан. Подтвердите адрес в письме и войдите.");
+  }
+  storeSession(body);
+  return true;
+}
+
+/* ---- слияние: у каждого задания своя отметка времени, удаления оставляют след ---- */
+function mergeTaskLists(localItems, remoteItems){
+  const byId = new Map();
+  for (const item of remoteItems || []) if (item && item.id) byId.set(item.id, item);
+  for (const item of localItems || []){
+    if (!item || !item.id) continue;
+    const other = byId.get(item.id);
+    if (!other || String(item.updatedAt || "") >= String(other.updatedAt || "")) byId.set(item.id, item);
+  }
+  return [...byId.values()];
+}
+function splitTasks(items){
+  const cutoff = addDays(todayISO(), -60);
+  const alive = [], graves = [];
+  for (const item of items){
+    if (item.deleted){
+      if (String(item.updatedAt || "").slice(0, 10) >= cutoff) graves.push({id: item.id, deleted: true, updatedAt: item.updatedAt});
+    } else alive.push(item);
+  }
+  return {alive, graves};
+}
+function localTaskPayload(){
+  return state.tasks.filter(t => !t.demo).concat(state.graves || []);
+}
+
+async function syncPull(){
+  const res = await sbFetch("/rest/v1/planner_state?select=kind,data,updated_at&user_id=eq." + Sync.session.user_id);
+  if (!res.ok) throw new Error("Не удалось прочитать данные: " + res.status);
+  const rows = await res.json();
+  const remoteTasks = rows.find(r => r.kind === "tasks");
+  const remoteSettings = rows.find(r => r.kind === "settings");
+  let changed = false;
+
+  const merged = mergeTaskLists(localTaskPayload(), remoteTasks ? (remoteTasks.data.items || []) : []);
+  const split = splitTasks(merged);
+  const before = JSON.stringify(state.tasks.map(t => t.id + ":" + (t.updatedAt || "")).sort());
+  state.graves = split.graves;
+  if (split.alive.length || !state.usingDemo){
+    state.tasks = split.alive;
+    state.usingDemo = false;
+  }
+  if (before !== JSON.stringify(state.tasks.map(t => t.id + ":" + (t.updatedAt || "")).sort())) changed = true;
+
+  if (remoteSettings && remoteSettings.data){
+    const mine = state.settings.updatedAt || "";
+    const theirs = remoteSettings.data.updatedAt || "";
+    if (theirs > mine){
+      state.settings = Object.assign({}, DEFAULT_SETTINGS, remoteSettings.data);
+      changed = true;
+    }
+  }
+  if (changed){ saveLocal(); render(); }
+  return {hasRemoteTasks: !!remoteTasks, hasRemoteSettings: !!remoteSettings};
+}
+async function syncPush(){
+  const rows = [
+    {user_id: Sync.session.user_id, kind: "tasks", data: {items: localTaskPayload()}},
+    {user_id: Sync.session.user_id, kind: "settings", data: state.settings}
+  ];
+  const res = await sbFetch("/rest/v1/planner_state?on_conflict=user_id,kind", {
+    method: "POST",
+    headers: {Prefer: "resolution=merge-duplicates,return=minimal"},
+    body: JSON.stringify(rows)
+  });
+  if (!res.ok){
+    const text = await res.text().catch(() => "");
+    throw new Error("Не удалось сохранить: " + res.status + (text ? " — " + text.slice(0, 120) : ""));
+  }
+}
+async function syncNow(reason){
+  if (!syncActive() || Sync.state === "busy") return;
+  Sync.state = "busy";
+  Sync.note = "";
+  render();
+  try {
+    await syncPull();
+    await syncPush();
+    Sync.lastSyncAt = nowStamp();
+    lsSet(SB_META_KEY, {lastSyncAt: Sync.lastSyncAt});
+    Sync.state = "ready";
+  } catch (e){
+    Sync.state = "error";
+    Sync.note = (e && e.message) || "Не удалось синхронизировать";
+  }
+  render();
+}
+function schedulePush(){
+  if (!syncActive()) return;
+  clearTimeout(Sync.pushTimer);
+  Sync.pushTimer = setTimeout(() => {
+    if (!syncActive()) return;
+    syncPush().then(() => {
+      Sync.lastSyncAt = nowStamp();
+      lsSet(SB_META_KEY, {lastSyncAt: Sync.lastSyncAt});
+      if (Sync.state === "error"){ Sync.state = "ready"; Sync.note = ""; }
+      render();
+    }).catch(e => {
+      Sync.state = "error";
+      Sync.note = (e && e.message) || "Не удалось сохранить";
+      render();
+    });
+  }, 1200);
+}
+function syncStart(){
+  Sync.cfg = lsGet(SB_CFG_KEY) || (typeof window !== "undefined" && window.__SUPABASE__) || null;
+  const meta = lsGet(SB_META_KEY);
+  if (meta && meta.lastSyncAt) Sync.lastSyncAt = meta.lastSyncAt;
+  if (!syncEnabled()){ Sync.state = "off"; return; }
+  Sync.session = lsGet(SB_SESSION_KEY);
+  if (!Sync.session){ Sync.state = "signed-out"; render(); return; }
+  Sync.state = "ready";
+  syncNow("start");
+  clearInterval(Sync.timer);
+  Sync.timer = setInterval(() => syncNow("timer"), 60000);
+  window.addEventListener("focus", () => syncNow("focus"));
+}
+
 let errorNote = "";
 function flashError(e, fallback){
   const code = e && e.code ? e.code : "";
@@ -805,11 +1024,11 @@ async function connectStore(){
   let use = null;
   try { use = window.claude && typeof window.claude.use === "function" ? window.claude.use.bind(window.claude) : null; }
   catch (e) { use = null; }
-  if (!use) return;
+  if (!use){ syncStart(); return; }
 
   try { db = await use("db"); } catch (e) { db = null; }
   try { downloads = await use("downloads"); } catch (e) { downloads = null; }
-  if (!db){ render(); return; }
+  if (!db){ syncStart(); render(); return; }
 
   const mode = document.getElementById("storeMode");
   if (mode) mode.textContent = "синхронизируется на всех устройствах";
@@ -1638,6 +1857,7 @@ function renderSettings(){
       "</div>" +
       '<p class="muted" style="margin-top:10px">Уведомление приходит, пока вкладка открыта. Держите её закреплённой — тогда в назначенное время увидите, что делать.</p>' +
     "</div>" +
+    renderSyncCard() +
     '<div class="card">' +
       '<h3 class="section-title">Данные</h3>' +
       '<div class="row">' +
@@ -1650,6 +1870,81 @@ function renderSettings(){
             : "Задания хранятся в этом браузере. Резервная копия — это текст, который можно вставить обратно на вкладке «Загрузить».") +
       "</p>" +
     "</div></section>";
+}
+function syncStatusLine(){
+  if (Sync.state === "busy") return ["", "синхронизирую…"];
+  if (Sync.state === "error") return ["bad", Sync.note || "ошибка синхронизации"];
+  if (Sync.state === "signed-out") return ["warn", Sync.note || "ключи сохранены, осталось войти"];
+  if (Sync.state === "ready"){
+    const when = Sync.lastSyncAt ? new Date(Sync.lastSyncAt) : null;
+    return ["good", "включена" + (when ? ", последний обмен в " + pad(when.getHours()) + ":" + pad(when.getMinutes()) : "")];
+  }
+  return ["", "выключена"];
+}
+function renderSyncCard(){
+  if (db){
+    return '<div class="card">' +
+      '<h3 class="section-title">Синхронизация</h3>' +
+      '<p class="muted">Здесь она уже работает: задания и расписание лежат в хранилище этой страницы ' +
+      'и открываются с любого устройства под вашей учётной записью. ' +
+      'Настройка Supabase нужна только для версии, выложенной отдельным сайтом.</p>' +
+    "</div>";
+  }
+  const cfg = Sync.cfg || {url: "", key: ""};
+  const [tone, text] = syncStatusLine();
+  const email = Sync.session && Sync.session.email ? Sync.session.email : "";
+
+  let html = '<div class="card">' +
+    '<div class="spread" style="margin-bottom:10px">' +
+      '<h3 class="section-title" style="margin:0">Синхронизация через Supabase</h3>' +
+      '<span class="tag" style="' + (tone === "good" ? "color:var(--ok)" : tone === "bad" ? "color:var(--danger)" : tone === "warn" ? "color:var(--warn)" : "") + '">' + esc(text) + "</span>" +
+    "</div>";
+
+  if (!syncEnabled()){
+    html += '<p class="muted" style="margin-bottom:12px;max-width:62ch">Чтобы задания открывались и на телефоне, и на ноутбуке, ' +
+      'нужен бесплатный проект Supabase: создайте его, выполните SQL из <span class="mono">supabase/schema.sql</span> ' +
+      'и вставьте сюда адрес проекта и публичный ключ <span class="mono">anon</span> (Project Settings → API). ' +
+      'Ключ публичный по устройству Supabase — данные закрывает не он, а правило «видно только свои строки».</p>';
+  }
+
+  html += '<div class="grid2">' +
+      '<div class="field"><label for="sbUrl">Адрес проекта</label>' +
+        '<input type="text" id="sbUrl" placeholder="https://xxxxx.supabase.co" value="' + esc(cfg.url || "") + '"></div>' +
+      '<div class="field"><label for="sbKey">Публичный ключ anon</label>' +
+        '<input type="text" id="sbKey" placeholder="eyJhbGciOi…" value="' + esc(cfg.key || "") + '"></div>' +
+    "</div>" +
+    '<div class="row" style="margin-top:10px"><button class="btn" data-act="sb-save">Сохранить ключи</button>' +
+      (syncEnabled() ? '<button class="btn ghost" data-act="sb-forget">Забыть проект</button>' : "") +
+    "</div>";
+
+  if (syncEnabled()){
+    if (syncActive()){
+      html += '<div class="row" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">' +
+        "<span>Вход выполнен: <strong>" + esc(email) + "</strong></span>" +
+        '<button class="btn" data-act="sb-sync">Синхронизировать сейчас</button>' +
+        '<button class="btn ghost" data-act="sb-signout">Выйти</button>' +
+      "</div>" +
+      '<p class="muted" style="margin-top:10px">Изменения уходят через секунду после правки, входящие подтягиваются раз в минуту ' +
+      "и при возврате на вкладку. Задание, удалённое на одном устройстве, не воскресает на другом.</p>";
+    } else {
+      html += '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">' +
+        '<div class="grid2">' +
+          '<div class="field"><label for="sbEmail">Почта</label><input type="text" id="sbEmail" autocomplete="username" placeholder="you@example.com"></div>' +
+          '<div class="field"><label for="sbPass">Пароль</label><input type="password" id="sbPass" autocomplete="current-password" placeholder="не меньше 6 символов"></div>' +
+        "</div>" +
+        '<div class="row" style="margin-top:10px">' +
+          '<button class="btn primary" data-act="sb-signin">Войти</button>' +
+          '<button class="btn" data-act="sb-signup">Создать аккаунт</button>' +
+        "</div>" +
+        '<p class="muted" style="margin-top:10px">Тот же адрес и пароль на втором устройстве — и списки сойдутся. ' +
+        "Пароль нигде не сохраняется, хранится только выданный сервером токен.</p>" +
+      "</div>";
+    }
+  }
+  if (Sync.note && Sync.state === "error"){
+    html += '<div class="notice bad" style="margin-top:12px"><i class="n-mark"></i><div class="n-body">' + esc(Sync.note) + "</div></div>";
+  }
+  return html + "</div>";
 }
 function notifyLabel(){
   if (state.notifyState === "granted") return "включены";
@@ -1793,6 +2088,65 @@ view.addEventListener("click", async e => {
     const list = (state.settings.schedule || []).filter(x => x.id !== el.dataset.cid);
     return putSettings({schedule: list});
   }
+
+  if (act === "sb-save"){
+    const url = (document.getElementById("sbUrl").value || "").trim();
+    const key = (document.getElementById("sbKey").value || "").trim();
+    if (!/^https?:\/\//.test(url)){
+      Sync.state = "error";
+      Sync.note = "Адрес проекта должен начинаться с https:// — скопируйте его из Project Settings → API.";
+      return render();
+    }
+    if (key.length < 20){
+      Sync.state = "error";
+      Sync.note = "Ключ выглядит слишком коротким — нужен публичный ключ anon целиком.";
+      return render();
+    }
+    Sync.cfg = {url, key};
+    lsSet(SB_CFG_KEY, Sync.cfg);
+    Sync.note = "";
+    Sync.state = syncActive() ? "ready" : "signed-out";
+    return render();
+  }
+  if (act === "sb-forget"){
+    if (!confirm("Забыть проект Supabase на этом устройстве? Задания останутся здесь и в облаке.")) return;
+    Sync.cfg = null; Sync.session = null; Sync.state = "off"; Sync.note = "";
+    clearInterval(Sync.timer);
+    lsSet(SB_CFG_KEY, null); lsSet(SB_SESSION_KEY, null);
+    return render();
+  }
+  if (act === "sb-signin" || act === "sb-signup"){
+    const email = (document.getElementById("sbEmail").value || "").trim();
+    const password = document.getElementById("sbPass").value || "";
+    if (!email || !password){
+      Sync.state = "error";
+      Sync.note = "Введите почту и пароль.";
+      return render();
+    }
+    Sync.state = "busy"; Sync.note = ""; render();
+    try {
+      await sbAuth(act === "sb-signup" ? "signup" : "signin", email, password);
+      Sync.state = "ready";
+      render();
+      await syncNow("signin");
+      clearInterval(Sync.timer);
+      Sync.timer = setInterval(() => syncNow("timer"), 60000);
+    } catch (e){
+      Sync.state = "signed-out";
+      Sync.note = (e && e.message) || "Не удалось войти";
+      render();
+    }
+    return;
+  }
+  if (act === "sb-signout"){
+    Sync.session = null;
+    lsSet(SB_SESSION_KEY, null);
+    clearInterval(Sync.timer);
+    Sync.state = "signed-out";
+    Sync.note = "";
+    return render();
+  }
+  if (act === "sb-sync") return syncNow("manual");
 
   if (act === "notify") return askNotifications();
   if (act === "copy"){
