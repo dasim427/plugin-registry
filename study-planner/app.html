@@ -1,0 +1,1780 @@
+<title>Без снежного кома</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,600;7..72,700&display=swap">
+<style>
+:root{
+  --bg:#eceee7;
+  --grid:rgba(27,32,40,.05);
+  --surface:#f7f8f3;
+  --surface-2:#e3e6da;
+  --ink:#1b2028;
+  --ink-2:#3c4552;
+  --muted:#6b7480;
+  --line:#d2d6c9;
+  --line-strong:#b9bfad;
+  --accent:#26348c;
+  --accent-soft:rgba(38,52,140,.10);
+  --ok:#2c6f52;
+  --ok-soft:rgba(44,111,82,.12);
+  --warn:#8f6410;
+  --warn-soft:rgba(143,100,16,.14);
+  --danger:#ab2f26;
+  --danger-soft:rgba(171,47,38,.12);
+  --shadow:0 1px 0 rgba(27,32,40,.05), 0 8px 24px -18px rgba(27,32,40,.5);
+  --display:"Literata",Georgia,"Times New Roman",serif;
+  --body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13161b;
+    --grid:rgba(232,234,229,.045);
+    --surface:#1b1f26;
+    --surface-2:#252b34;
+    --ink:#e9ebe4;
+    --ink-2:#c5cad0;
+    --muted:#929aa4;
+    --line:#2e343d;
+    --line-strong:#414955;
+    --accent:#a3b2ff;
+    --accent-soft:rgba(163,178,255,.14);
+    --ok:#62b98d;
+    --ok-soft:rgba(98,185,141,.16);
+    --warn:#d6a33f;
+    --warn-soft:rgba(214,163,63,.16);
+    --danger:#e8736a;
+    --danger-soft:rgba(232,115,106,.16);
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 26px -20px #000;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13161b;
+  --grid:rgba(232,234,229,.045);
+  --surface:#1b1f26;
+  --surface-2:#252b34;
+  --ink:#e9ebe4;
+  --ink-2:#c5cad0;
+  --muted:#929aa4;
+  --line:#2e343d;
+  --line-strong:#414955;
+  --accent:#a3b2ff;
+  --accent-soft:rgba(163,178,255,.14);
+  --ok:#62b98d;
+  --ok-soft:rgba(98,185,141,.16);
+  --warn:#d6a33f;
+  --warn-soft:rgba(214,163,63,.16);
+  --danger:#e8736a;
+  --danger-soft:rgba(232,115,106,.16);
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 26px -20px #000;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  background-image:repeating-linear-gradient(0deg,var(--grid) 0 1px,transparent 1px 28px),
+                   repeating-linear-gradient(90deg,var(--grid) 0 1px,transparent 1px 28px);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+.app{max-width:1040px;margin:0 auto;padding-inline:18px;padding-block:0 56px}
+
+/* ---------- header ---------- */
+.top{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:30;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  margin-inline:-18px;padding:14px 18px 0;
+}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand h1{font-size:23px;font-weight:700}
+.brand .tagline{color:var(--muted);font-size:12.5px;font-family:var(--mono)}
+.tabs{display:flex;gap:2px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{
+  appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  padding:9px 12px;color:var(--muted);cursor:pointer;white-space:nowrap;
+  font-weight:500;font-size:14px;
+}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-current="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tabs .pip{
+  display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;
+  background:var(--danger);color:#fff;font-family:var(--mono);font-size:11px;line-height:17px;text-align:center;
+}
+:root[data-theme="dark"] .tabs .pip,
+:root:not([data-theme="light"]) .tabs .pip{color:#13161b}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .tabs .pip{color:#fff}}
+
+/* ---------- generic ---------- */
+main{padding-top:22px;display:flex;flex-direction:column;gap:26px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.section-title{font-size:17px;font-weight:600;margin-bottom:10px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.btn{
+  appearance:none;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  padding:7px 12px;border-radius:7px;cursor:pointer;font-size:13.5px;font-weight:500;
+  transition:background .12s ease,border-color .12s ease,transform .06s ease;
+}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);background:var(--accent-soft)}
+.btn.tiny{padding:4px 9px;font-size:12.5px}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.spread{display:flex;gap:14px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+
+/* ---------- day header + meter ---------- */
+.dayhead h2{font-size:26px}
+.meter{margin-top:14px}
+.meter-bar{
+  display:flex;height:34px;border:1px solid var(--line-strong);border-radius:6px;overflow:hidden;background:var(--surface);
+}
+.meter-seg{
+  min-width:2px;display:flex;align-items:center;padding-inline:8px;overflow:hidden;
+  font-family:var(--mono);font-size:11px;color:var(--bg);white-space:nowrap;
+  border-right:1px solid color-mix(in srgb,var(--bg) 45%,transparent);
+  background:var(--accent);
+}
+.meter-seg.s2{background:color-mix(in srgb,var(--accent) 72%,var(--bg))}
+.meter-seg.s3{background:color-mix(in srgb,var(--accent) 50%,var(--bg));color:var(--ink)}
+.meter-seg.free{
+  background:repeating-linear-gradient(135deg,transparent 0 6px,var(--ok-soft) 6px 12px);
+  color:var(--ok);border-right:0;font-weight:500;
+}
+.meter-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.meter-legend b{font-family:var(--mono);color:var(--ink);font-weight:500}
+
+/* ---------- notices ---------- */
+.notice{
+  display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-radius:8px;
+  border:1px solid var(--line);background:var(--surface);font-size:13.5px;
+}
+.notice + .notice{margin-top:8px}
+.notice .n-mark{width:3px;align-self:stretch;border-radius:2px;background:var(--muted);flex:none}
+.notice.bad{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 30%,transparent)}
+.notice.bad .n-mark{background:var(--danger)}
+.notice.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.notice.warn .n-mark{background:var(--warn)}
+.notice.good{background:var(--ok-soft);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.notice.good .n-mark{background:var(--ok)}
+.notice strong{font-weight:600}
+.notice .n-body{flex:1;min-width:0}
+
+/* ---------- today blocks ---------- */
+.blocks{display:flex;flex-direction:column;gap:10px}
+.block{
+  display:grid;grid-template-columns:4px 1fr auto;gap:0 14px;align-items:start;
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:13px 15px 13px 0;box-shadow:var(--shadow);overflow:hidden;
+}
+.block .stripe{grid-row:1/-1;align-self:stretch;background:var(--accent);margin:-13px 0}
+.block.urgent .stripe{background:var(--danger)}
+.block.soon .stripe{background:var(--warn)}
+.block-main{min-width:0}
+.block-top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.tag{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 6px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);
+}
+.subject{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.block-time{
+  font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--accent);
+  background:var(--accent-soft);padding:2px 7px;border-radius:5px;letter-spacing:.01em;
+}
+.block-time.free{color:var(--muted);background:var(--surface-2)}
+.block h3{font-size:16.5px;font-weight:600;margin-top:3px;font-family:var(--body);letter-spacing:0}
+.tl-class{
+  display:grid;grid-template-columns:104px 1fr;gap:14px;align-items:center;
+  padding:11px 15px;border:1px dashed var(--line-strong);border-radius:10px;color:var(--ink-2);
+}
+.tl-class.past{opacity:.5}
+.tl-time{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+@media (max-width:620px){.tl-class{grid-template-columns:1fr;gap:4px}}
+.block-meta{margin-top:5px;font-size:12.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.dot{color:var(--line-strong)}
+.deadline-chip{font-family:var(--mono);font-size:12px}
+.deadline-chip.urgent{color:var(--danger);font-weight:500}
+.deadline-chip.soon{color:var(--warn);font-weight:500}
+.plan-hours{font-family:var(--mono);font-size:13px;color:var(--ink);background:var(--accent-soft);padding:2px 7px;border-radius:5px}
+.bar{height:5px;border-radius:3px;background:var(--surface-2);margin-top:9px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent);border-radius:3px}
+.block-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+@media (max-width:620px){
+  .block{grid-template-columns:4px 1fr}
+  .block-actions{grid-column:2;justify-content:flex-start;margin-top:10px}
+}
+
+/* ---------- week ---------- */
+.week{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.wday{display:grid;grid-template-columns:104px 1fr;gap:14px;padding:11px 14px;align-items:center}
+.wday + .wday{border-top:1px solid var(--line)}
+.wday.today{background:var(--accent-soft)}
+.wday.off .wname{color:var(--muted)}
+.wname{font-family:var(--mono);font-size:12.5px;line-height:1.35}
+.wname b{display:block;font-weight:500;color:var(--ink);font-size:13px}
+.wtrack{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wbar{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line)}
+.wbar i{display:block;height:100%;border-right:1px solid color-mix(in srgb,var(--surface) 55%,transparent)}
+.wchips{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.wchip{font-family:var(--mono);font-size:11.5px;background:var(--surface-2);padding:2px 7px;border-radius:5px;white-space:nowrap}
+.wfree{font-family:var(--mono);font-size:11.5px;color:var(--ok)}
+@media (max-width:560px){.wday{grid-template-columns:1fr;gap:7px}}
+
+/* ---------- task list ---------- */
+.tasklist{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.trow{display:grid;grid-template-columns:3px 1fr auto;gap:0 13px;align-items:center;padding:12px 15px 12px 0}
+.trow + .trow{border-top:1px solid var(--line)}
+.trow .stripe{align-self:stretch;grid-row:1/-1;margin:-12px 0;background:var(--line-strong)}
+.trow.urgent .stripe{background:var(--danger)}
+.trow.soon .stripe{background:var(--warn)}
+.trow.ok .stripe{background:var(--accent)}
+.trow.done{opacity:.55}
+.trow.done h3{text-decoration:line-through}
+.tmain{min-width:0}
+.tmain h3{font-size:15.5px;font-weight:600;font-family:var(--body);letter-spacing:0}
+.tmeta{display:flex;gap:7px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted);margin-top:4px}
+.tactions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.group-title{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 15px 6px;background:var(--surface-2)}
+@media (max-width:620px){
+  .trow{grid-template-columns:3px 1fr}
+  .tactions{grid-column:2;justify-content:flex-start;margin-top:9px}
+}
+
+/* ---------- forms ---------- */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+input[type="text"],input[type="date"],input[type="time"],input[type="number"],select,textarea{
+  background:var(--bg);border:1px solid var(--line-strong);border-radius:7px;padding:8px 10px;
+  font-size:14.5px;width:100%;min-width:0;
+}
+textarea{resize:vertical;line-height:1.55;font-family:var(--mono);font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.grid2{grid-template-columns:1fr}}
+dialog{
+  border:1px solid var(--line-strong);border-radius:12px;background:var(--surface);color:var(--ink);
+  padding:0;width:min(520px,calc(100vw - 32px));box-shadow:0 30px 60px -30px rgba(0,0,0,.6);
+}
+dialog::backdrop{background:rgba(10,12,16,.45)}
+dialog form{padding:18px;display:flex;flex-direction:column;gap:13px}
+dialog h2{font-size:19px}
+
+/* ---------- capacity editor ---------- */
+.cap-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.cap-day{display:flex;flex-direction:column;gap:5px;align-items:center}
+.cap-day span{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.cap-day input{text-align:center;padding:7px 4px;font-family:var(--mono)}
+.cap-day.rest input{color:var(--ok)}
+@media (max-width:560px){.cap-grid{grid-template-columns:repeat(4,1fr)}}
+
+/* ---------- import ---------- */
+.preview{width:100%;border-collapse:collapse;font-size:13.5px}
+.preview th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:6px 9px;border-bottom:1px solid var(--line)}
+.preview td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+.preview tr.skip{opacity:.4}
+.scroll-x{overflow-x:auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;box-shadow:var(--shadow)}
+.card + .card{margin-top:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stat{background:var(--surface);padding:12px 14px}
+.stat b{display:block;font-family:var(--mono);font-size:21px;font-weight:500;margin-top:2px}
+.stat.risk b{color:var(--danger)}
+.stat.good b{color:var(--ok)}
+.foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+.empty{padding:30px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-family:var(--display);font-size:18px;margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Без снежного кома</h1>
+      <p class="tagline" id="storeMode">локальное хранилище</p>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+  </header>
+  <main id="view"></main>
+  <footer class="foot">
+    Планировщик разносит каждое задание на сессии по 30 мин – 2,5 ч так, чтобы успеть к сроку и не занимать день целиком.
+    Дневная норма настраивается отдельно для каждого дня недели.
+  </footer>
+</div>
+
+<dialog id="taskDialog">
+  <form method="dialog" id="taskForm">
+    <h2 id="dlgTitle">Новое задание</h2>
+    <div class="field">
+      <label for="f-title">Что сделать</label>
+      <input type="text" id="f-title" required placeholder="Лабораторная №3: транзисторный ключ">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="f-subject">Предмет</label>
+        <input type="text" id="f-subject" list="subjects" placeholder="Электроника">
+        <datalist id="subjects"></datalist>
+      </div>
+      <div class="field">
+        <label for="f-type">Тип</label>
+        <select id="f-type"></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="f-deadline">Срок сдачи</label>
+        <input type="date" id="f-deadline" required>
+      </div>
+      <div class="field">
+        <label for="f-hours">Сколько часов займёт</label>
+        <input type="number" id="f-hours" min="0.5" max="200" step="0.5" value="2">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="f-done">Уже сделано, ч</label>
+        <input type="number" id="f-done" min="0" max="200" step="0.5" value="0">
+      </div>
+      <div class="field">
+        <label for="f-priority">Важность</label>
+        <select id="f-priority">
+          <option value="normal">Обычная</option>
+          <option value="high">Высокая — планировать в первую очередь</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger" id="f-delete" hidden>Удалить</button>
+      <div class="row">
+        <button type="button" class="btn ghost" id="f-cancel">Отмена</button>
+        <button type="submit" class="btn primary">Сохранить</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="classDialog">
+  <form method="dialog" id="classForm">
+    <h2 id="clsTitle">Пара</h2>
+    <div class="field">
+      <label for="c-title">Предмет</label>
+      <input type="text" id="c-title" required placeholder="Матанализ">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="c-day">День недели</label>
+        <select id="c-day"></select>
+      </div>
+      <div class="field">
+        <label for="c-place">Аудитория</label>
+        <input type="text" id="c-place" placeholder="ауд. 305">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="c-start">Начало</label>
+        <input type="time" id="c-start" required value="08:30">
+      </div>
+      <div class="field">
+        <label for="c-end">Конец</label>
+        <input type="time" id="c-end" required value="10:05">
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger" id="c-delete" hidden>Удалить</button>
+      <div class="row">
+        <button type="button" class="btn ghost" id="c-cancel">Отмена</button>
+        <button type="submit" class="btn primary">Сохранить</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+
+/* ====================== константы ====================== */
+const WD = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+const WD_FULL = ["понедельник","вторник","среда","четверг","пятница","суббота","воскресенье"];
+const MONTHS = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+
+const TYPES = [
+  {id:"hw",       label:"ДЗ",        hours:2,  kw:["дз","домашк","homework","задачи","задачник"]},
+  {id:"lab",      label:"Лаба",      hours:4,  kw:["лаб","lab"]},
+  {id:"essay",    label:"Реферат",   hours:6,  kw:["реферат","эссе","essay","сочинен"]},
+  {id:"course",   label:"Курсовая",  hours:14, kw:["курсов","диплом","вкр"]},
+  {id:"report",   label:"Доклад",    hours:4,  kw:["доклад","презентац","слайд","выступлен"]},
+  {id:"test",     label:"Тест",      hours:1.5,kw:["тест","quiz","контрольн","летучк"]},
+  {id:"exam",     label:"Экзамен",   hours:8,  kw:["экзамен","зачёт","зачет","коллоквиум","exam"]},
+  {id:"practice", label:"Практика",  hours:3,  kw:["практик","отчёт","отчет","семинар","конспект"]},
+  {id:"other",    label:"Задание",   hours:2,  kw:[]}
+];
+const TYPE_BY_ID = Object.fromEntries(TYPES.map(t => [t.id, t]));
+
+const DEFAULT_SETTINGS = {
+  capacity: [2.5, 2.5, 2.5, 2.5, 2, 1.5, 0],
+  reminderTime: "18:00",
+  minBlock: 0.5,
+  maxBlock: 2.5,
+  schedule: [],
+  dayStart: "09:00",
+  dayEnd: "22:00",
+  gap: 20
+};
+
+const TABS = [
+  {id:"today",    label:"Сегодня"},
+  {id:"week",     label:"План"},
+  {id:"tasks",    label:"Задания"},
+  {id:"schedule", label:"Расписание"},
+  {id:"import",   label:"Загрузить"},
+  {id:"settings", label:"Настройки"}
+];
+
+const LS_KEY = "snowball.planner.v1";
+
+/* ====================== состояние ====================== */
+const state = {
+  tasks: [],
+  settings: {...DEFAULT_SETTINGS},
+  tab: "today",
+  filter: "active",
+  usingDemo: false,
+  importText: "",
+  importRows: null,
+  importSkipped: {},
+  schedText: "",
+  schedRows: null,
+  notifyState: "unknown"
+};
+
+let db = null;
+let downloads = null;
+let unsubTasks = null;
+let unsubSettings = null;
+
+/* ====================== даты ====================== */
+const pad = n => String(n).padStart(2, "0");
+function iso(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
+function todayISO(){ return iso(new Date()); }
+function parseISO(s){ const p = String(s).split("-").map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function addDays(s, n){ const d = parseISO(s); d.setDate(d.getDate()+n); return iso(d); }
+function dayDiff(a, b){ return Math.round((parseISO(b) - parseISO(a)) / 86400000); }
+function wdIndex(s){ return (parseISO(s).getDay() + 6) % 7; }
+function fmtDate(s){ const d = parseISO(s); return d.getDate() + " " + MONTHS[d.getMonth()]; }
+function fmtDateFull(s){ const d = parseISO(s); return WD_FULL[wdIndex(s)][0].toUpperCase() + WD_FULL[wdIndex(s)].slice(1) + ", " + d.getDate() + " " + MONTHS[d.getMonth()]; }
+
+function fmtHours(h){
+  h = Math.round(h * 100) / 100;
+  if (h <= 0) return "0 мин";
+  const hh = Math.floor(h + 1e-9);
+  const mm = Math.round((h - hh) * 60);
+  if (hh === 0) return mm + " мин";
+  if (mm === 0) return hh + " ч";
+  return hh + " ч " + mm + " мин";
+}
+function plural(n, one, few, many){
+  const a = Math.abs(n) % 100, b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+}
+function deadlineText(deadline){
+  const d = dayDiff(todayISO(), deadline);
+  if (d < 0) return "просрочено на " + Math.abs(d) + " " + plural(Math.abs(d), "день", "дня", "дней");
+  if (d === 0) return "сдать сегодня";
+  if (d === 1) return "сдать завтра";
+  if (d < 7) return "через " + d + " " + plural(d, "день", "дня", "дней");
+  return fmtDate(deadline);
+}
+function urgency(task){
+  const d = dayDiff(todayISO(), task.deadline);
+  if (d < 0) return "urgent";
+  if (d <= 2) return "soon";
+  return "ok";
+}
+function toMin(s){
+  const m = String(s == null ? "" : s).match(/(\d{1,2})[:.](\d{2})/);
+  return m ? (+m[1]) * 60 + (+m[2]) : 0;
+}
+function fromMin(v){
+  v = Math.max(0, Math.round(v));
+  return pad(Math.floor(v / 60) % 24) + ":" + pad(v % 60);
+}
+function nowMin(){ const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+function fmtSpan(a, b){ return fromMin(a) + "–" + fromMin(b); }
+
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const q = x => Math.round(x * 4) / 4;
+const remaining = t => Math.max(0, (Number(t.hours) || 0) - (Number(t.done) || 0));
+
+/* ====================== расписание пар ====================== */
+function classesFor(dateStr, settings){
+  return (settings.schedule || [])
+    .filter(c => c.day === wdIndex(dateStr))
+    .sort((a, b) => toMin(a.start) - toMin(b.start));
+}
+/* свободные окна дня в минутах: день минус пары минус дорога/перерыв */
+function freeWindows(dateStr, settings){
+  const from = toMin(settings.dayStart || "09:00");
+  const till = toMin(settings.dayEnd || "22:00");
+  const gap = Math.max(0, Number(settings.gap) || 0);
+  let windows = till > from ? [[from, till]] : [];
+
+  for (const c of classesFor(dateStr, settings)){
+    const busy = [toMin(c.start) - gap, toMin(c.end) + gap];
+    const next = [];
+    for (const w of windows){
+      if (busy[1] <= w[0] || busy[0] >= w[1]){ next.push(w); continue; }
+      if (busy[0] > w[0]) next.push([w[0], busy[0]]);
+      if (busy[1] < w[1]) next.push([busy[1], w[1]]);
+    }
+    windows = next;
+  }
+  if (dateStr === todayISO()){
+    const edge = nowMin() + 5;
+    windows = windows.map(w => [Math.max(w[0], edge), w[1]]);
+  }
+  return windows.filter(w => w[1] - w[0] >= 25);
+}
+function windowHours(dateStr, settings){
+  const total = freeWindows(dateStr, settings).reduce((s, w) => s + (w[1] - w[0]), 0);
+  return Math.floor((total / 60) * 4) / 4;
+}
+/* раскладывает часы блоков по реальным окнам дня */
+function assignTimes(day, settings){
+  const windows = freeWindows(day.date, settings).map(w => [w[0], w[1]]);
+  let wi = 0;
+  for (const b of day.blocks){
+    let need = Math.round(b.hours * 60);
+    b.slots = [];
+    while (need > 5 && wi < windows.length){
+      const w = windows[wi];
+      const avail = w[1] - w[0];
+      if (avail < 25){ wi++; continue; }
+      const take = Math.min(need, avail);
+      b.slots.push([w[0], w[0] + take]);
+      need -= take;
+      w[0] += take + 10; /* короткий перерыв между подходами */
+      if (w[1] - w[0] < 25) wi++;
+    }
+    b.start = b.slots.length ? b.slots[0][0] : null;
+  }
+  day.blocks.sort((a, b) => (a.start == null ? 1e9 : a.start) - (b.start == null ? 1e9 : b.start));
+}
+
+/* ====================== планировщик ====================== */
+function capacityFor(dateStr, settings){
+  const v = Number(settings.capacity[wdIndex(dateStr)]);
+  const norm = isFinite(v) && v > 0 ? v : 0;
+  if (!norm) return 0;
+  if (!(settings.schedule || []).length && dateStr !== todayISO()) return norm;
+  return Math.min(norm, windowHours(dateStr, settings));
+}
+
+function buildPlan(tasks, settings){
+  const start = todayISO();
+  const active = tasks
+    .filter(t => t.status !== "done" && remaining(t) > 0.05)
+    .sort((a, b) =>
+      (a.deadline < b.deadline ? -1 : a.deadline > b.deadline ? 1 : 0) ||
+      ((b.priority === "high") - (a.priority === "high")));
+
+  let end = addDays(start, 13);
+  for (const t of active) if (t.deadline > end) end = t.deadline;
+  const hardEnd = addDays(start, 120);
+  if (end > hardEnd) end = hardEnd;
+
+  const days = [];
+  const byDate = {};
+  for (let d = start; d <= end; d = addDays(d, 1)){
+    const cap = capacityFor(d, settings);
+    const o = {date: d, cap, used: 0, free: cap, blocks: []};
+    days.push(o);
+    byDate[d] = o;
+  }
+
+  const minBlock = Number(settings.minBlock) || 0.5;
+  const maxBlock = Number(settings.maxBlock) || 2.5;
+  const risks = [];
+
+  const place = (day, task, hours) => {
+    const found = day.blocks.find(b => b.taskId === task.id);
+    if (found) found.hours += hours;
+    else day.blocks.push({taskId: task.id, hours, task});
+    day.used += hours;
+    day.free = Math.max(0, day.cap - day.used);
+  };
+
+  const MAX_TASKS_PER_DAY = 3; /* больше трёх предметов за день — это уже каша */
+
+  for (const task of active){
+    let need = remaining(task);
+    let dl = task.deadline < start ? start : task.deadline;
+    if (dl > end) dl = end;
+    /* горящие задания игнорируют ограничение на количество дел в дне */
+    const urgent = dayDiff(start, task.deadline) <= 2;
+    const minPut = Math.min(minBlock, need);
+
+    const fits = day => day.date <= dl && day.free >= minPut - 0.001 &&
+      (urgent || day.blocks.length < MAX_TASKS_PER_DAY || day.blocks.some(b => b.taskId === task.id));
+
+    const pool = days.filter(fits);
+    if (!pool.length){
+      risks.push({task, missing: need});
+      continue;
+    }
+    const perDay = need / pool.length;
+    /* куски по получасу — короче садиться нет смысла, длиннее не выдержать */
+    const chunk = Math.min(maxBlock, Math.max(minBlock, Math.ceil(perDay * 2) / 2));
+    const sessions = Math.min(pool.length, Math.max(1, Math.ceil(need / chunk)));
+
+    const picks = [];
+    if (sessions >= pool.length) picks.push(...pool);
+    else for (let k = 0; k < sessions; k++) picks.push(pool[Math.floor(k * pool.length / sessions)]);
+
+    const put = day => {
+      const amount = Math.min(chunk, need, day.free);
+      if (amount < Math.min(minBlock, need) - 0.001) return;
+      place(day, task, amount);
+      need -= amount;
+    };
+    for (const day of picks){ if (need <= 0.05) break; put(day); }
+    if (need > 0.05) for (const day of pool){ if (need <= 0.05) break; if (!day.blocks.some(b => b.taskId === task.id)) continue; put(day); }
+    if (need > 0.05) for (const day of pool){ if (need <= 0.05) break; put(day); }
+    if (need > 0.05) risks.push({task, missing: need});
+  }
+
+  for (const day of days) assignTimes(day, settings);
+
+  return {days, byDate, risks, start, end};
+}
+
+/* ====================== хранилище ====================== */
+function newId(){ return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function saveLocal(){
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({tasks: state.tasks, settings: state.settings}));
+  } catch (e) { /* приватный режим — просто не сохраняем */ }
+}
+function loadLocal(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.tasks)) state.tasks = data.tasks;
+    if (data.settings) state.settings = {...DEFAULT_SETTINGS, ...data.settings};
+    return state.tasks.length > 0;
+  } catch (e) { return false; }
+}
+
+async function putTask(task){
+  const i = state.tasks.findIndex(t => t.id === task.id);
+  if (i >= 0) state.tasks[i] = task; else state.tasks.push(task);
+  state.usingDemo = false;
+  render();
+  saveLocal();
+  if (db){
+    const {id, ...body} = task;
+    try { await db.doc("tasks/" + id).set(body); }
+    catch (e) { flashError(e, "Задание сохранено только на этом устройстве."); }
+  }
+}
+async function dropTask(id){
+  state.tasks = state.tasks.filter(t => t.id !== id);
+  render();
+  saveLocal();
+  if (db){
+    try { await db.doc("tasks/" + id).delete(); }
+    catch (e) { flashError(e, "Не удалось удалить задание в общем хранилище."); }
+  }
+}
+async function putSettings(patch){
+  state.settings = {...state.settings, ...patch};
+  render();
+  saveLocal();
+  if (db){
+    try { await db.doc("settings/main").set(state.settings); }
+    catch (e) { flashError(e, "Настройки сохранены только на этом устройстве."); }
+  }
+}
+let errorNote = "";
+function flashError(e, fallback){
+  const code = e && e.code ? e.code : "";
+  errorNote = code === "quota_exceeded" ? "Хранилище заполнено — удалите старые задания."
+            : code === "not_granted" ? "Доступ к общему хранилищу не выдан. " + fallback
+            : fallback;
+  render();
+  setTimeout(() => { errorNote = ""; render(); }, 6000);
+}
+
+async function connectStore(){
+  let use = null;
+  try { use = window.claude && typeof window.claude.use === "function" ? window.claude.use.bind(window.claude) : null; }
+  catch (e) { use = null; }
+  if (!use) return;
+
+  try { db = await use("db"); } catch (e) { db = null; }
+  try { downloads = await use("downloads"); } catch (e) { downloads = null; }
+  if (!db){ render(); return; }
+
+  const mode = document.getElementById("storeMode");
+  if (mode) mode.textContent = "синхронизируется на всех устройствах";
+
+  unsubTasks = db.collection("tasks").onSnapshot(snap => {
+    state.tasks = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    state.usingDemo = false;
+    if (!snap.metadata.fromCache && state.tasks.length === 0) seedDemoIfEmpty();
+    render();
+  }, err => {
+    if (err && err.code === "revoked"){ db = null; if (mode) mode.textContent = "локальное хранилище"; render(); }
+  });
+
+  unsubSettings = db.doc("settings/main").onSnapshot(snap => {
+    if (snap.exists) state.settings = {...DEFAULT_SETTINGS, ...snap.data()};
+    render();
+  }, () => {});
+}
+
+/* ====================== примеры ====================== */
+function demoTasks(){
+  const t = todayISO();
+  return [
+    {id:"demo1", demo:true, subject:"Матанализ",  title:"ИДЗ №4: кратные интегралы", type:"hw",     deadline:addDays(t,5),  hours:4,  done:1, priority:"normal", status:"active"},
+    {id:"demo2", demo:true, subject:"Физика",     title:"Лабораторная: измерение сопротивления", type:"lab", deadline:addDays(t,2), hours:3, done:0, priority:"normal", status:"active"},
+    {id:"demo3", demo:true, subject:"История",    title:"Реферат: индустриализация 1930-х", type:"essay", deadline:addDays(t,16), hours:8, done:0, priority:"normal", status:"active"},
+    {id:"demo4", demo:true, subject:"Английский", title:"Эссе на 250 слов", type:"essay", deadline:addDays(t,9), hours:2.5, done:0, priority:"normal", status:"active"}
+  ];
+}
+function seedDemoIfEmpty(){
+  if (state.tasks.length === 0){
+    state.tasks = demoTasks();
+    state.usingDemo = true;
+  }
+}
+
+/* ====================== разбор текста ====================== */
+const RE_ISO = /(\d{4})-(\d{1,2})-(\d{1,2})/;
+const RE_DMY = /(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?/;
+const RE_HOURS = /(\d+(?:[.,]\d+)?)\s*(?:часов|часа|час|ч|hours|hour|hrs|hr|h)(?![а-яёa-z])/i;
+const RE_MINS = /(\d+)\s*(?:минут[аы]?|мин|м|minutes|min|m)(?![а-яёa-z])/i;
+
+function fixYear(dateStr){
+  const t = todayISO();
+  if (dayDiff(t, dateStr) < -30){
+    const d = parseISO(dateStr);
+    d.setFullYear(d.getFullYear() + 1);
+    return iso(d);
+  }
+  return dateStr;
+}
+function parseDate(text){
+  const t = todayISO();
+  const low = " " + text.toLowerCase() + " ";
+
+  let m = text.match(RE_ISO);
+  if (m) return {date: iso(new Date(+m[1], +m[2]-1, +m[3])), matched: m[0]};
+
+  m = text.match(RE_DMY);
+  if (m){
+    let year = new Date().getFullYear();
+    if (m[3]) year = m[3].length === 2 ? 2000 + (+m[3]) : +m[3];
+    const d = new Date(year, (+m[2]) - 1, +m[1]);
+    if (d.getMonth() === (+m[2]) - 1 && d.getDate() === +m[1]){
+      return {date: m[3] ? iso(d) : fixYear(iso(d)), matched: m[0]};
+    }
+  }
+  if (/\bсегодня\b/.test(low)) return {date: t, matched: "сегодня"};
+  if (/\bзавтра\b/.test(low)) return {date: addDays(t, 1), matched: "завтра"};
+  if (/\bпослезавтра\b/.test(low)) return {date: addDays(t, 2), matched: "послезавтра"};
+
+  m = low.match(/через\s+(\d+)\s*(дн|день|дня|дней|недел)/);
+  if (m) return {date: addDays(t, /недел/.test(m[2]) ? (+m[1]) * 7 : +m[1]), matched: m[0].trim()};
+
+  for (let i = 0; i < WD_FULL.length; i++){
+    const stem = WD_FULL[i].slice(0, WD_FULL[i].length - 1);
+    const re = new RegExp("(?:в|во|до)\\s+" + stem + "[а-яё]*");
+    const mm = low.match(re);
+    if (mm){
+      let step = (i - wdIndex(t) + 7) % 7;
+      if (step === 0) step = 7;
+      return {date: addDays(t, step), matched: mm[0].trim()};
+    }
+  }
+  return null;
+}
+function parseHours(text){
+  let hours = 0, matched = [];
+  const mh = text.match(RE_HOURS);
+  if (mh){ hours += parseFloat(mh[1].replace(",", ".")); matched.push(mh[0]); }
+  const mm = text.match(RE_MINS);
+  if (mm && !(mh && mh.index === mm.index)){ hours += (+mm[1]) / 60; matched.push(mm[0]); }
+  return hours > 0 ? {hours: Math.round(hours * 4) / 4, matched} : null;
+}
+function detectType(text){
+  const low = text.toLowerCase();
+  for (const t of TYPES){
+    for (const k of t.kw) if (low.includes(k)) return t;
+  }
+  return TYPE_BY_ID.other;
+}
+function cleanup(s){
+  return s.replace(/^[\s\-–—•*·.,:;]+|[\s\-–—•*·,:;]+$/g, "")
+          .replace(/\s{2,}/g, " ")
+          .replace(/\s+(до|к|сдать|срок|дедлайн|deadline|due)$/i, "")
+          .trim();
+}
+function parseLine(line){
+  const raw = line.trim();
+  let parts = null;
+  if (raw.includes("|")) parts = raw.split("|");
+  else if (raw.includes("\t")) parts = raw.split("\t");
+  else if ((raw.match(/,/g) || []).length >= 2 && !RE_DMY.test(raw.split(",")[0])) parts = raw.split(",");
+
+  let subject = "", title = "", rest = raw;
+
+  if (parts && parts.length >= 3){
+    parts = parts.map(p => p.trim());
+    subject = parts[0];
+    title = parts[1];
+    rest = parts.slice(2).join(" ");
+  } else if (raw.includes(":") && raw.indexOf(":") < 40 && !/\d:\d/.test(raw.slice(0, raw.indexOf(":") + 2))){
+    subject = raw.slice(0, raw.indexOf(":")).trim();
+    rest = raw.slice(raw.indexOf(":") + 1).trim();
+    title = rest;
+  } else {
+    const words = raw.split(/\s+/);
+    subject = words[0] || "";
+    rest = words.slice(1).join(" ");
+    title = rest;
+  }
+
+  const dateInfo = parseDate(rest) || parseDate(raw);
+  const hoursInfo = parseHours(rest) || parseHours(raw);
+
+  let cleanTitle = title;
+  if (dateInfo) cleanTitle = cleanTitle.replace(dateInfo.matched, " ");
+  if (hoursInfo) for (const m of hoursInfo.matched) cleanTitle = cleanTitle.replace(m, " ");
+  cleanTitle = cleanup(cleanTitle.replace(/\b(до|к|срок|дедлайн|due|deadline)\b/gi, " "));
+
+  const type = detectType(raw);
+  if (!cleanTitle) cleanTitle = type.label;
+
+  return {
+    subject: cleanup(subject) || "Без предмета",
+    title: cleanTitle,
+    type: type.id,
+    deadline: dateInfo ? dateInfo.date : "",
+    hours: hoursInfo ? hoursInfo.hours : type.hours,
+    guessedHours: !hoursInfo,
+    ok: !!dateInfo
+  };
+}
+function parseImport(text){
+  return text.split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith("#"))
+    .map(parseLine);
+}
+
+/* ---- разбор расписания пар ---- */
+const DAY_WORDS = [
+  ["понедельникам","понедельник","пн","monday","mon"],
+  ["вторникам","вторник","вт","tuesday","tue"],
+  ["средам","среда","среду","ср","wednesday","wed"],
+  ["четвергам","четверг","чт","thursday","thu"],
+  ["пятницам","пятница","пятницу","пт","friday","fri"],
+  ["субботам","суббота","субботу","сб","saturday","sat"],
+  ["воскресеньям","воскресенье","вс","sunday","sun"]
+];
+function parseSchedLine(line){
+  let rest = " " + line.trim() + " ";
+  let start = null, end = null;
+
+  let m = rest.match(/(\d{1,2})[:.](\d{2})\s*(?:[-–—]|до)\s*(\d{1,2})[:.](\d{2})/);
+  if (m){
+    start = (+m[1]) * 60 + (+m[2]);
+    end = (+m[3]) * 60 + (+m[4]);
+    rest = rest.replace(m[0], " ");
+  } else {
+    m = rest.match(/(\d{1,2})[:.](\d{2})/);
+    if (m){
+      start = (+m[1]) * 60 + (+m[2]);
+      end = start + 95; /* стандартная пара 1 ч 35 мин */
+      rest = rest.replace(m[0], " ");
+    }
+  }
+
+  const days = [];
+  for (let i = 0; i < DAY_WORDS.length; i++){
+    for (const w of DAY_WORDS[i]){
+      const re = new RegExp("(^|[\\s,;|/(])" + w + "(?=[\\s,;|/.)]|$)", "i");
+      if (re.test(rest)){ days.push(i); rest = rest.replace(re, "$1 "); break; }
+    }
+  }
+
+  let place = "";
+  const mp = rest.match(/(?:ауд\.?|каб\.?|аудитория|room)\s*№?\s*([-\w\d\/а-яё]+)/i);
+  if (mp){ place = mp[0].trim(); rest = rest.replace(mp[0], " "); }
+
+  const title = cleanup(rest.replace(/[|,;]+/g, " ").replace(/\s{2,}/g, " "));
+  return {
+    days, start, end, place,
+    title: title || "Пара",
+    ok: days.length > 0 && start != null && end > start
+  };
+}
+function parseSchedule(text){
+  return text.split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith("#"))
+    .map(parseSchedLine);
+}
+
+/* ====================== отрисовка ====================== */
+const view = document.getElementById("view");
+const tabsEl = document.getElementById("tabs");
+
+function overdueTasks(){
+  const t = todayISO();
+  return state.tasks.filter(x => x.status !== "done" && remaining(x) > 0.05 && x.deadline < t);
+}
+
+function renderTabs(){
+  const overdue = overdueTasks().length;
+  tabsEl.innerHTML = TABS.map(t =>
+    '<button data-tab="' + t.id + '" aria-current="' + (state.tab === t.id) + '">' + t.label +
+    (t.id === "today" && overdue ? '<span class="pip">' + overdue + "</span>" : "") +
+    "</button>").join("");
+}
+
+function meterHTML(day){
+  const cap = day.cap;
+  const total = Math.max(cap, day.used);
+  if (total <= 0){
+    return '<div class="meter"><div class="meter-bar"><div class="meter-seg free" style="flex:1">выходной — ничего не запланировано</div></div></div>';
+  }
+  const segs = day.blocks.map((b, i) =>
+    '<div class="meter-seg ' + (i === 1 ? "s2" : i >= 2 ? "s3" : "") + '" style="flex:' + b.hours + '" title="' +
+    esc(b.task.subject + " · " + b.task.title) + '">' + esc(shortSubject(b.task)) + " " + fmtHours(b.hours) + "</div>").join("");
+  const free = Math.max(0, cap - day.used);
+  const freeSeg = free > 0.05
+    ? '<div class="meter-seg free" style="flex:' + free + '">свободно ' + fmtHours(free) + "</div>"
+    : "";
+  return '<div class="meter"><div class="meter-bar">' + segs + freeSeg + "</div>" +
+    '<div class="meter-legend"><span>норма дня <b>' + fmtHours(cap) + "</b></span>" +
+    "<span>по плану <b>" + fmtHours(day.used) + "</b></span>" +
+    "<span>останется свободно <b>" + fmtHours(free) + "</b></span></div></div>";
+}
+function shortSubject(task){
+  const s = task.subject || "";
+  return s.length > 14 ? s.slice(0, 13) + "…" : (s || task.title.slice(0, 12));
+}
+
+function noticesHTML(plan){
+  const out = [];
+  if (errorNote) out.push('<div class="notice bad"><i class="n-mark"></i><div class="n-body">' + esc(errorNote) + "</div></div>");
+
+  if (state.usingDemo){
+    out.push('<div class="notice"><i class="n-mark"></i><div class="n-body"><strong>Это примеры.</strong> ' +
+      'Так планировщик выглядит в работе. Добавьте своё задание или вставьте список на вкладке «Загрузить» — примеры исчезнут. ' +
+      '<button class="btn tiny" data-act="clear-demo" style="margin-left:6px">Очистить примеры</button></div></div>');
+  }
+
+  const overdue = overdueTasks();
+  if (overdue.length){
+    out.push('<div class="notice bad"><i class="n-mark"></i><div class="n-body"><strong>Просрочено: ' + overdue.length + " " +
+      plural(overdue.length, "задание", "задания", "заданий") + ".</strong> " +
+      esc(overdue.map(t => t.subject + " — " + t.title).join("; ")) +
+      ". Планировщик поставил их первыми на сегодня.</div></div>");
+  }
+
+  const tomorrow = addDays(todayISO(), 1);
+  const dueSoon = state.tasks.filter(t => t.status !== "done" && (t.deadline === todayISO() || t.deadline === tomorrow));
+  if (dueSoon.length){
+    out.push('<div class="notice warn"><i class="n-mark"></i><div class="n-body"><strong>Сдавать вот-вот:</strong> ' +
+      dueSoon.map(t => esc(t.subject + " — " + t.title) + " (" + deadlineText(t.deadline) + ")").join("; ") + "</div></div>");
+  }
+
+  for (const r of plan.risks){
+    out.push('<div class="notice bad"><i class="n-mark"></i><div class="n-body"><strong>Не успеваешь: ' + esc(r.task.title) + ".</strong> " +
+      "До " + fmtDate(r.task.deadline) + " не помещается " + fmtHours(r.missing) +
+      ". Подними дневную норму в настройках, сократи объём или договорись о переносе срока.</div></div>");
+  }
+  return out.join("");
+}
+
+function blockTimeLabel(block){
+  if (!block.slots || !block.slots.length) return null;
+  return block.slots.map(s => fmtSpan(s[0], s[1])).join(" и ");
+}
+function blockCardHTML(block){
+  const t = block.task;
+  const u = urgency(t);
+  const rem = remaining(t);
+  const time = blockTimeLabel(block);
+  const progress = (Number(t.hours) || 0) > 0 ? Math.min(100, Math.round(((Number(t.done) || 0) / t.hours) * 100)) : 0;
+  return '<article class="block ' + u + '">' +
+    '<i class="stripe"></i>' +
+    '<div class="block-main">' +
+      '<div class="block-top">' +
+        (time ? '<span class="block-time">' + time + "</span>" : '<span class="block-time free">когда получится</span>') +
+        '<span class="tag">' + esc((TYPE_BY_ID[t.type] || TYPE_BY_ID.other).label) + "</span>" +
+        '<span class="subject">' + esc(t.subject || "без предмета") + "</span>" +
+        '<span class="deadline-chip ' + u + '">' + deadlineText(t.deadline) + "</span>" +
+      "</div>" +
+      "<h3>" + esc(t.title) + "</h3>" +
+      '<div class="block-meta">' +
+        '<span class="plan-hours">сегодня ' + fmtHours(block.hours) + "</span>" +
+        '<span class="dot">·</span><span>сделано ' + fmtHours(Number(t.done) || 0) + " из " + fmtHours(Number(t.hours) || 0) + "</span>" +
+        '<span class="dot">·</span><span>осталось ' + fmtHours(rem) + "</span>" +
+      "</div>" +
+      '<div class="bar"><span style="width:' + progress + '%"></span></div>' +
+    "</div>" +
+    '<div class="block-actions">' +
+      '<button class="btn tiny" data-act="log" data-id="' + t.id + '" data-h="0.5">+30 мин</button>' +
+      '<button class="btn tiny" data-act="log" data-id="' + t.id + '" data-h="1">+1 ч</button>' +
+      '<button class="btn tiny primary" data-act="done" data-id="' + t.id + '">Готово</button>' +
+      '<button class="btn tiny ghost" data-act="edit" data-id="' + t.id + '">Изменить</button>' +
+    "</div>" +
+  "</article>";
+}
+
+function classRowHTML(c){
+  const done = c.day === wdIndex(todayISO()) && toMin(c.end) < nowMin();
+  return '<div class="tl-class' + (done ? " past" : "") + '">' +
+    '<span class="tl-time">' + fmtSpan(toMin(c.start), toMin(c.end)) + "</span>" +
+    "<span><strong>" + esc(c.title) + "</strong>" +
+      (c.place ? ' <span class="muted">· ' + esc(c.place) + "</span>" : "") +
+      ' <span class="tag" style="margin-left:6px">пара</span></span>' +
+  "</div>";
+}
+function renderToday(plan){
+  const today = plan.byDate[plan.start];
+  const blocks = today ? today.blocks : [];
+  const freeToday = today ? Math.max(0, today.cap - today.used) : 0;
+  const classes = classesFor(plan.start, state.settings);
+
+  let html = '<section>' +
+    '<div class="spread dayhead">' +
+      '<div><p class="eyebrow">Сегодня</p><h2>' + fmtDateFull(plan.start) + "</h2></div>" +
+      (classes.length
+        ? '<p class="muted mono" style="font-size:12.5px">' + classes.length + " " + plural(classes.length, "пара", "пары", "пар") +
+          " · " + fmtSpan(toMin(classes[0].start), toMin(classes[classes.length - 1].end)) + "</p>"
+        : '<p class="muted mono" style="font-size:12.5px">пар нет</p>') +
+    "</div>" +
+    (today ? meterHTML(today) : "") +
+  "</section>";
+
+  const notices = noticesHTML(plan);
+  if (notices) html += "<section>" + notices + "</section>";
+
+  html += '<section><div class="spread" style="margin-bottom:10px">' +
+    '<h3 class="section-title" style="margin:0">Когда что делать</h3>' +
+    '<button class="btn" data-act="new">+ Задание</button></div>';
+
+  if (!blocks.length && !classes.length){
+    html += '<div class="card empty"><b>На сегодня ничего не запланировано</b>' +
+      (state.tasks.some(t => t.status !== "done")
+        ? "Всё разнесено на другие дни — день свободен."
+        : "Добавьте задания, и планировщик разложит их по дням.") + "</div>";
+  } else {
+    /* пары и рабочие блоки в одной ленте по времени */
+    const items = classes.map(c => ({at: toMin(c.start), html: classRowHTML(c)}))
+      .concat(blocks.map(b => ({at: b.start == null ? 1e9 : b.start, html: blockCardHTML(b)})))
+      .sort((a, b) => a.at - b.at);
+    html += '<div class="blocks">' + items.map(i => i.html).join("") + "</div>";
+    if (!blocks.length){
+      html += '<div class="notice good" style="margin-top:10px"><i class="n-mark"></i><div class="n-body">' +
+        "Заданий на сегодня нет — после пар день свободен.</div></div>";
+    } else if (freeToday > 0.05){
+      html += '<div class="notice good" style="margin-top:10px"><i class="n-mark"></i><div class="n-body">' +
+        "Кроме плана и пар остаётся <strong>" + fmtHours(freeToday) + "</strong> свободных. Это запас, а не задел — тратьте на себя.</div></div>";
+    }
+  }
+  html += "</section>";
+
+  const next = plan.days.slice(1, 7).filter(d => d.blocks.length);
+  if (next.length){
+    html += '<section><h3 class="section-title">Дальше на неделе</h3><div class="week">' +
+      next.map(d => weekRowHTML(d, false)).join("") + "</div></section>";
+  }
+  return html;
+}
+
+function weekRowHTML(day, showToday){
+  const isToday = day.date === todayISO();
+  const cap = day.cap;
+  const total = Math.max(cap, day.used, 0.01);
+  const bars = day.blocks.map((b, i) =>
+    '<i style="flex:' + b.hours + ';background:' + (i % 3 === 0 ? "var(--accent)" : i % 3 === 1
+      ? "color-mix(in srgb,var(--accent) 72%,var(--surface))"
+      : "color-mix(in srgb,var(--accent) 48%,var(--surface))") + '"></i>').join("");
+  const free = Math.max(0, cap - day.used);
+  const bar = '<div class="wbar">' + bars + (free > 0.05 ? '<i style="flex:' + free + ';background:transparent"></i>' : "") + "</div>";
+  const classes = classesFor(day.date, state.settings);
+  const chips = day.blocks.length
+    ? day.blocks.map(b => '<span class="wchip">' + (b.slots && b.slots.length ? fmtSpan(b.slots[0][0], b.slots[0][1]) + " " : "") +
+        esc(shortSubject(b.task)) + " · " + fmtHours(b.hours) + "</span>").join("")
+    : '<span class="wfree">' + (cap > 0 ? "свободный день" : "выходной") + "</span>";
+  return '<div class="wday' + (isToday && showToday ? " today" : "") + (cap <= 0 ? " off" : "") + '">' +
+    '<div class="wname"><b>' + WD[wdIndex(day.date)] + ", " + fmtDate(day.date) + "</b>" +
+      (classes.length ? classes.length + " " + plural(classes.length, "пара", "пары", "пар") + " до " + fromMin(toMin(classes[classes.length - 1].end)) + "<br>" : "") +
+      (cap > 0 ? "норма " + fmtHours(cap) : "выходной") + "</div>" +
+    '<div class="wtrack">' + bar + '<div class="wchips">' + chips +
+      (day.blocks.length && free > 0.05 ? '<span class="wfree">свободно ' + fmtHours(free) + "</span>" : "") +
+    "</div></div></div>";
+}
+
+function renderWeek(plan){
+  const days = plan.days.slice(0, 21);
+  const totalPlanned = plan.days.reduce((s, d) => s + d.used, 0);
+  const busiest = plan.days.reduce((m, d) => d.used > m.used ? d : m, plan.days[0] || {used: 0, date: plan.start});
+  const freeDays = plan.days.slice(0, 14).filter(d => d.cap > 0 && d.used <= 0.05).length;
+
+  return '<section>' +
+    '<p class="eyebrow">Ближайшие ' + days.length + " " + plural(days.length, "день", "дня", "дней") + "</p>" +
+    '<h2 style="font-size:23px;margin-bottom:14px">Как работа разложена по дням</h2>' +
+    '<div class="stats">' +
+      '<div class="stat"><span class="muted">Всего работы впереди</span><b>' + fmtHours(totalPlanned) + "</b></div>" +
+      '<div class="stat"><span class="muted">Самый плотный день</span><b>' + WD[wdIndex(busiest.date)] + " " + fmtHours(busiest.used) + "</b></div>" +
+      '<div class="stat good"><span class="muted">Полностью свободных дней за 2 недели</span><b>' + freeDays + "</b></div>" +
+    "</div>" +
+    '<div class="week" style="margin-top:16px">' + days.map(d => weekRowHTML(d, true)).join("") + "</div>" +
+  "</section>";
+}
+
+function taskRowHTML(t){
+  const done = t.status === "done";
+  const u = done ? "" : urgency(t);
+  const progress = (Number(t.hours) || 0) > 0 ? Math.min(100, Math.round(((Number(t.done) || 0) / t.hours) * 100)) : 0;
+  return '<div class="trow ' + u + (done ? " done" : "") + '">' +
+    '<i class="stripe"></i>' +
+    '<div class="tmain">' +
+      "<h3>" + esc(t.title) + "</h3>" +
+      '<div class="tmeta">' +
+        '<span class="tag">' + esc((TYPE_BY_ID[t.type] || TYPE_BY_ID.other).label) + "</span>" +
+        '<span class="mono">' + fmtDate(t.deadline) + "</span>" +
+        (done ? "<span>сдано</span>" : '<span class="deadline-chip ' + u + '">' + deadlineText(t.deadline) + "</span>") +
+        '<span class="dot">·</span><span class="mono">' + fmtHours(Number(t.done) || 0) + " / " + fmtHours(Number(t.hours) || 0) + "</span>" +
+        (t.priority === "high" ? '<span class="tag" style="color:var(--danger)">важное</span>' : "") +
+      "</div>" +
+      (done ? "" : '<div class="bar" style="max-width:260px"><span style="width:' + progress + '%"></span></div>') +
+    "</div>" +
+    '<div class="tactions">' +
+      (done
+        ? '<button class="btn tiny" data-act="reopen" data-id="' + t.id + '">Вернуть в работу</button>'
+        : '<button class="btn tiny" data-act="done" data-id="' + t.id + '">Сдано</button>') +
+      '<button class="btn tiny ghost" data-act="edit" data-id="' + t.id + '">Изменить</button>' +
+      '<button class="btn tiny ghost" data-act="del" data-id="' + t.id + '">Удалить</button>' +
+    "</div>" +
+  "</div>";
+}
+
+function renderTasks(){
+  const done = state.tasks.filter(t => t.status === "done");
+  const active = state.tasks.filter(t => t.status !== "done")
+    .sort((a, b) => (a.deadline < b.deadline ? -1 : a.deadline > b.deadline ? 1 : 0));
+  const list = state.filter === "done" ? done : state.filter === "all" ? active.concat(done) : active;
+
+  const bySubject = {};
+  for (const t of list) (bySubject[t.subject || "Без предмета"] ||= []).push(t);
+
+  let html = '<section><div class="spread" style="margin-bottom:12px">' +
+    "<div><p class=\"eyebrow\">Все задания</p><h2 style=\"font-size:23px\">" + active.length + " " +
+      plural(active.length, "активное", "активных", "активных") + ", " + done.length + " " +
+      plural(done.length, "сдано", "сдано", "сдано") + "</h2></div>" +
+    '<div class="row">' +
+      ["active:Активные", "done:Сданные", "all:Все"].map(p => {
+        const [id, label] = p.split(":");
+        return '<button class="btn tiny' + (state.filter === id ? " primary" : "") + '" data-act="filter" data-filter="' + id + '">' + label + "</button>";
+      }).join("") +
+      '<button class="btn primary" data-act="new">+ Задание</button>' +
+    "</div></div>";
+
+  if (!list.length){
+    html += '<div class="card empty"><b>Пусто</b>Добавьте задание кнопкой выше или вставьте список на вкладке «Загрузить».</div>';
+  } else {
+    html += '<div class="tasklist">' + Object.keys(bySubject).sort().map(subj =>
+      '<div class="group-title">' + esc(subj) + "</div>" + bySubject[subj].map(taskRowHTML).join("")
+    ).join("") + "</div>";
+  }
+  return html + "</section>";
+}
+
+function renderImport(){
+  const rows = state.importRows;
+  let html = '<section><p class="eyebrow">Загрузить задания</p>' +
+    '<h2 style="font-size:23px;margin-bottom:6px">Вставьте список — разберу построчно</h2>' +
+    '<p class="muted" style="margin-bottom:14px;max-width:62ch">Одна строка — одно задание. Понимаю формат ' +
+    '<span class="mono">Предмет | Задание | 24.09 | 3ч</span>, строки через запятую, ' +
+    '<span class="mono">Предмет: задание до 24.09 3ч</span> и просто текст с датой. ' +
+    'Даты: <span class="mono">24.09</span>, <span class="mono">2026-09-24</span>, «завтра», «через 5 дней», «в пятницу». ' +
+    'Если часы не указаны, поставлю оценку по типу работы — потом поправите.</p>' +
+    '<div class="card">' +
+      '<div class="field"><label for="importBox">Список заданий</label>' +
+      '<textarea id="importBox" rows="9" placeholder="Матанализ | ИДЗ №4 | 24.09 | 4ч&#10;Физика: лабораторная по оптике до 26.09 3ч&#10;История реферат 10.10 8ч">' + esc(state.importText) + "</textarea></div>" +
+      '<div class="row" style="margin-top:12px">' +
+        '<button class="btn primary" data-act="parse">Разобрать</button>' +
+        '<button class="btn" data-act="sample">Вставить пример</button>' +
+        '<button class="btn ghost" data-act="clear-import">Очистить</button>' +
+      "</div>" +
+    "</div>";
+
+  if (rows){
+    const good = rows.filter((r, i) => r.ok && !state.importSkipped[i]);
+    html += '<div class="card"><div class="spread" style="margin-bottom:10px">' +
+      '<h3 class="section-title" style="margin:0">Разобрано: ' + rows.length + " " + plural(rows.length, "строка", "строки", "строк") + "</h3>" +
+      '<button class="btn primary" data-act="commit"' + (good.length ? "" : " disabled") + ">Добавить " + good.length + " " +
+        plural(good.length, "задание", "задания", "заданий") + "</button></div>" +
+      '<div class="scroll-x"><table class="preview"><thead><tr>' +
+      "<th></th><th>Предмет</th><th>Задание</th><th>Тип</th><th>Срок</th><th>Часы</th></tr></thead><tbody>" +
+      rows.map((r, i) => {
+        const skipped = !r.ok || state.importSkipped[i];
+        return '<tr class="' + (skipped ? "skip" : "") + '">' +
+          '<td><input type="checkbox" id="imp' + i + '" data-act="toggle-row" data-i="' + i + '"' +
+            (r.ok ? "" : " disabled") + (skipped ? "" : " checked") + "></td>" +
+          "<td>" + esc(r.subject) + "</td>" +
+          "<td>" + esc(r.title) + "</td>" +
+          "<td>" + esc((TYPE_BY_ID[r.type] || TYPE_BY_ID.other).label) + "</td>" +
+          '<td class="mono">' + (r.ok ? fmtDate(r.deadline) : '<span style="color:var(--danger)">нет даты</span>') + "</td>" +
+          '<td class="mono">' + fmtHours(r.hours) + (r.guessedHours ? '<span class="muted"> оценка</span>' : "") + "</td>" +
+        "</tr>";
+      }).join("") +
+      "</tbody></table></div>" +
+      (rows.some(r => !r.ok) ? '<p class="muted" style="margin-top:10px">Строки без даты пропущу: допишите срок и разберите ещё раз.</p>' : "") +
+      "</div>";
+  }
+  return html + "</section>";
+}
+
+function renderSchedule(){
+  const sched = state.settings.schedule || [];
+  const rows = state.schedRows;
+  const today = todayISO();
+
+  let html = '<section><div class="spread" style="margin-bottom:12px">' +
+    '<div><p class="eyebrow">Расписание пар</p>' +
+    '<h2 style="font-size:23px">' + (sched.length
+      ? sched.length + " " + plural(sched.length, "пара", "пары", "пар") + " в неделю"
+      : "Расписание не загружено") + "</h2></div>" +
+    '<div class="row"><button class="btn" data-act="class-new">+ Пара</button></div></div>';
+
+  if (sched.length){
+    html += '<div class="week">' + WD.map((wd, i) => {
+      const dayClasses = sched.filter(c => c.day === i).sort((a, b) => toMin(a.start) - toMin(b.start));
+      const dateForDay = (() => { let d = today; for (let k = 0; k < 7; k++){ if (wdIndex(d) === i) return d; d = addDays(d, 1); } return today; })();
+      const free = freeWindows(dateForDay, state.settings);
+      return '<div class="wday' + (wdIndex(today) === i ? " today" : "") + '">' +
+        '<div class="wname"><b>' + WD_FULL[i][0].toUpperCase() + WD_FULL[i].slice(1) + "</b>" +
+          (dayClasses.length ? dayClasses.length + " " + plural(dayClasses.length, "пара", "пары", "пар") : "пар нет") + "</div>" +
+        '<div class="wtrack">' +
+          (dayClasses.length
+            ? '<div class="wchips">' + dayClasses.map(c =>
+                '<span class="wchip">' + fmtSpan(toMin(c.start), toMin(c.end)) + " " + esc(c.title) +
+                '<button class="btn ghost tiny" data-act="class-edit" data-cid="' + esc(c.id) + '" style="padding:0 4px;margin-left:4px">✎</button>' +
+                '<button class="btn ghost tiny" data-act="class-del" data-cid="' + esc(c.id) + '" style="padding:0 4px">✕</button>' +
+                "</span>").join("")
+            : '<span class="wfree">весь день свободен</span>') +
+          '<div class="wfree">окна для учёбы: ' + (free.length ? free.map(w => fmtSpan(w[0], w[1])).join(", ") : "нет") + "</div>" +
+        "</div></div>";
+    }).join("") + "</div>";
+  }
+
+  html += '<div class="card" style="margin-top:16px">' +
+    '<h3 class="section-title">Загрузить расписание текстом</h3>' +
+    '<p class="muted" style="margin-bottom:12px;max-width:62ch">Одна строка — одна пара: ' +
+    '<span class="mono">Пн 8:30-10:05 Матанализ ауд. 305</span>. Понимаю «пн/понедельник», ' +
+    'несколько дней в строке (<span class="mono">Пн, Ср 12:00-13:35 Физика</span>) и время без конца — ' +
+    'тогда считаю пару в 1 ч 35 мин.</p>' +
+    '<div class="field"><label for="schedBox">Расписание</label>' +
+    '<textarea id="schedBox" rows="8" placeholder="Пн 8:30-10:05 Матанализ ауд. 305&#10;Пн 10:15-11:50 Физика&#10;Вт, Чт 12:00-13:35 Программирование">' + esc(state.schedText) + "</textarea></div>" +
+    '<div class="row" style="margin-top:12px">' +
+      '<button class="btn primary" data-act="sched-parse">Разобрать</button>' +
+      '<button class="btn" data-act="sched-sample">Вставить пример</button>' +
+      (sched.length ? '<button class="btn danger" data-act="sched-wipe">Удалить расписание</button>' : "") +
+    "</div>";
+
+  if (rows){
+    const good = rows.filter(r => r.ok);
+    const pairs = good.reduce((s, r) => s + r.days.length, 0);
+    html += '<div style="margin-top:16px"><div class="spread" style="margin-bottom:10px">' +
+      '<h3 class="section-title" style="margin:0">Разобрано: ' + pairs + " " + plural(pairs, "пара", "пары", "пар") + "</h3>" +
+      '<button class="btn primary" data-act="sched-commit"' + (pairs ? "" : " disabled") + ">Заменить расписание</button></div>" +
+      '<div class="scroll-x"><table class="preview"><thead><tr><th>Дни</th><th>Время</th><th>Пара</th><th>Место</th></tr></thead><tbody>' +
+      rows.map(r => '<tr class="' + (r.ok ? "" : "skip") + '">' +
+        '<td class="mono">' + (r.days.length ? r.days.map(d => WD[d]).join(", ") : '<span style="color:var(--danger)">нет дня</span>') + "</td>" +
+        '<td class="mono">' + (r.start != null ? fmtSpan(r.start, r.end) : '<span style="color:var(--danger)">нет времени</span>') + "</td>" +
+        "<td>" + esc(r.title) + "</td><td>" + esc(r.place) + "</td></tr>").join("") +
+      "</tbody></table></div></div>";
+  }
+  return html + "</div></section>";
+}
+
+function renderSettings(){
+  const s = state.settings;
+  const weekTotal = s.capacity.reduce((a, b) => a + (Number(b) || 0), 0);
+  const load = buildPlan(state.tasks, s);
+  const need = state.tasks.filter(t => t.status !== "done").reduce((a, t) => a + remaining(t), 0);
+
+  return '<section><p class="eyebrow">Настройки</p>' +
+    '<h2 style="font-size:23px;margin-bottom:14px">Сколько времени вы готовы отдавать учёбе</h2>' +
+    '<div class="card">' +
+      '<h3 class="section-title">Дневная норма по дням недели, часов</h3>' +
+      '<p class="muted" style="margin-bottom:12px">Планировщик никогда не поставит на день больше этой нормы. Поставьте 0 — день останется полностью свободным.</p>' +
+      '<div class="cap-grid">' + WD.map((d, i) => {
+        const dateForDay = (() => { let x = todayISO(); for (let k = 0; k < 7; k++){ if (wdIndex(x) === i) return x; x = addDays(x, 1); } return todayISO(); })();
+        const win = (s.schedule || []).length ? windowHours(dateForDay, s) : null;
+        return '<div class="cap-day' + ((Number(s.capacity[i]) || 0) === 0 ? " rest" : "") + '">' +
+        '<span>' + d + "</span>" +
+        '<input type="number" id="cap' + i + '" min="0" max="12" step="0.5" value="' + (Number(s.capacity[i]) || 0) + '" data-act="cap" data-i="' + i + '">' +
+        (win != null ? '<span title="свободно между парами">окна ' + fmtHours(win) + "</span>" : "") +
+        "</div>"; }).join("") + "</div>" +
+      '<div class="meter-legend" style="margin-top:12px">' +
+        "<span>в неделю <b>" + fmtHours(weekTotal) + "</b></span>" +
+        "<span>сейчас нужно всего <b>" + fmtHours(need) + "</b></span>" +
+        "<span>не влезает <b" + (load.risks.length ? ' style="color:var(--danger)"' : "") + ">" +
+          (load.risks.length ? load.risks.length + " " + plural(load.risks.length, "задание", "задания", "заданий") : "ничего") + "</b></span>" +
+      "</div>" +
+    "</div>" +
+    '<div class="card">' +
+      '<h3 class="section-title">Рабочий день</h3>' +
+      '<p class="muted" style="margin-bottom:12px">В эти границы планировщик вписывает занятия между парами. Зазор — время на дорогу и передышку до и после пары.</p>' +
+      '<div class="grid2">' +
+        '<div class="field"><label for="dayStart">Не раньше</label>' +
+          '<input type="time" id="dayStart" value="' + esc(s.dayStart || "09:00") + '" data-act="daystart"></div>' +
+        '<div class="field"><label for="dayEnd">Не позже</label>' +
+          '<input type="time" id="dayEnd" value="' + esc(s.dayEnd || "22:00") + '" data-act="dayend"></div>' +
+      "</div>" +
+      '<div class="field" style="margin-top:12px;max-width:220px"><label for="gapMin">Зазор вокруг пары, мин</label>' +
+        '<input type="number" id="gapMin" min="0" max="120" step="5" value="' + (Number(s.gap) || 0) + '" data-act="gap"></div>' +
+    "</div>" +
+    '<div class="card">' +
+      '<h3 class="section-title">Напоминание</h3>' +
+      '<div class="grid2">' +
+        '<div class="field"><label for="remTime">Во сколько напоминать</label>' +
+          '<input type="time" id="remTime" value="' + esc(s.reminderTime) + '" data-act="remtime"></div>' +
+        '<div class="field"><label for="maxBlock">Максимум за один подход, ч</label>' +
+          '<input type="number" id="maxBlock" min="0.5" max="6" step="0.5" value="' + (Number(s.maxBlock) || 2.5) + '" data-act="maxblock"></div>' +
+      "</div>" +
+      '<div class="row" style="margin-top:12px">' +
+        '<button class="btn" data-act="notify">Включить уведомления браузера</button>' +
+        '<span class="muted" id="notifyState">' + notifyLabel() + "</span>" +
+      "</div>" +
+      '<p class="muted" style="margin-top:10px">Уведомление приходит, пока вкладка открыта. Держите её закреплённой — тогда в назначенное время увидите, что делать.</p>' +
+    "</div>" +
+    '<div class="card">' +
+      '<h3 class="section-title">Данные</h3>' +
+      '<div class="row">' +
+        '<button class="btn" data-act="copy">Скопировать резервную копию</button>' +
+        (downloads ? '<button class="btn" data-act="download">Скачать .json</button>' : "") +
+        '<button class="btn danger" data-act="wipe">Удалить все задания</button>' +
+      "</div>" +
+      '<p class="muted" style="margin-top:10px">' +
+        (db ? "Задания хранятся в облаке этого приложения и открываются с любого устройства."
+            : "Задания хранятся в этом браузере. Резервная копия — это текст, который можно вставить обратно на вкладке «Загрузить».") +
+      "</p>" +
+    "</div></section>";
+}
+function notifyLabel(){
+  if (state.notifyState === "granted") return "включены";
+  if (state.notifyState === "denied") return "браузер запретил — напомню прямо на странице";
+  if (state.notifyState === "unsupported") return "недоступны здесь — напомню прямо на странице";
+  return "выключены";
+}
+
+function render(){
+  renderTabs();
+  const plan = buildPlan(state.tasks, state.settings);
+  let html = "";
+  if (state.tab === "today") html = renderToday(plan);
+  else if (state.tab === "week") html = renderWeek(plan);
+  else if (state.tab === "tasks") html = renderTasks();
+  else if (state.tab === "schedule") html = renderSchedule();
+  else if (state.tab === "import") html = renderImport();
+  else html = renderSettings();
+  view.innerHTML = html;
+
+  const dl = document.getElementById("subjects");
+  if (dl){
+    const subjects = [...new Set(state.tasks.map(t => t.subject).filter(Boolean))];
+    dl.innerHTML = subjects.map(s => '<option value="' + esc(s) + '"></option>').join("");
+  }
+}
+
+/* ====================== события ====================== */
+tabsEl.addEventListener("click", e => {
+  const b = e.target.closest("button[data-tab]");
+  if (!b) return;
+  state.tab = b.dataset.tab;
+  render();
+});
+
+view.addEventListener("click", async e => {
+  const el = e.target.closest("[data-act]");
+  if (!el) return;
+  const act = el.dataset.act;
+  const task = el.dataset.id ? state.tasks.find(t => t.id === el.dataset.id) : null;
+
+  if (act === "new") return openDialog(null);
+  if (act === "edit" && task) return openDialog(task);
+
+  if (act === "log" && task){
+    const add = parseFloat(el.dataset.h);
+    const next = {...task, done: Math.min(Number(task.hours) || 0, (Number(task.done) || 0) + add)};
+    if (remaining(next) <= 0.05) next.status = "done", next.completedAt = todayISO();
+    return materialize(next);
+  }
+  if (act === "done" && task){
+    return materialize({...task, done: Number(task.hours) || 0, status: "done", completedAt: todayISO()});
+  }
+  if (act === "reopen" && task){
+    return materialize({...task, status: "active", done: Math.min(Number(task.done) || 0, (Number(task.hours) || 0) - 0.5)});
+  }
+  if (act === "del" && task){
+    if (confirm("Удалить «" + task.title + "»?")) return dropTask(task.id);
+    return;
+  }
+  if (act === "filter"){ state.filter = el.dataset.filter; return render(); }
+  if (act === "clear-demo"){ state.tasks = []; state.usingDemo = false; saveLocal(); return render(); }
+
+  if (act === "parse"){
+    const box = document.getElementById("importBox");
+    state.importText = box ? box.value : "";
+    const restored = tryRestoreBackup(state.importText);
+    if (restored) return;
+    state.importSkipped = {};
+    state.importRows = parseImport(state.importText);
+    return render();
+  }
+  if (act === "sample"){
+    state.importText = "Матанализ | ИДЗ №4: кратные интегралы | 24.09 | 4ч\n" +
+      "Физика: лабораторная по оптике до 26.09 3ч\n" +
+      "История реферат про индустриализацию 10.10 8ч\n" +
+      "Английский эссе 250 слов через 5 дней 2ч\n" +
+      "Программирование | Курсовая: парсер | 2026-12-15 | 20ч";
+    state.importRows = null;
+    return render();
+  }
+  if (act === "clear-import"){ state.importText = ""; state.importRows = null; return render(); }
+  if (act === "commit") return commitImport();
+
+  if (act === "sched-parse"){
+    const box = document.getElementById("schedBox");
+    state.schedText = box ? box.value : "";
+    state.schedRows = parseSchedule(state.schedText);
+    return render();
+  }
+  if (act === "sched-sample"){
+    state.schedText = "Пн 8:30-10:05 Матанализ ауд. 305\n" +
+      "Пн 10:15-11:50 Физика\n" +
+      "Вт, Чт 12:00-13:35 Программирование ауд. 112\n" +
+      "Ср 14:00-15:35 История\n" +
+      "Пт 8:30-11:50 Английский";
+    state.schedRows = null;
+    return render();
+  }
+  if (act === "sched-commit"){
+    const rows = (state.schedRows || []).filter(r => r.ok);
+    if (!rows.length) return;
+    if ((state.settings.schedule || []).length &&
+        !confirm("Заменить текущее расписание на новое?")) return;
+    const schedule = [];
+    for (const r of rows){
+      for (const d of r.days){
+        schedule.push({id: newId(), day: d, start: fromMin(r.start), end: fromMin(r.end), title: r.title, place: r.place || ""});
+      }
+    }
+    state.schedRows = null;
+    state.schedText = "";
+    return putSettings({schedule});
+  }
+  if (act === "sched-wipe"){
+    if (!confirm("Удалить расписание пар? Задания останутся.")) return;
+    return putSettings({schedule: []});
+  }
+  if (act === "class-new") return openClassDialog(null);
+  if (act === "class-edit"){
+    const c = (state.settings.schedule || []).find(x => x.id === el.dataset.cid);
+    return openClassDialog(c || null);
+  }
+  if (act === "class-del"){
+    const list = (state.settings.schedule || []).filter(x => x.id !== el.dataset.cid);
+    return putSettings({schedule: list});
+  }
+
+  if (act === "notify") return askNotifications();
+  if (act === "copy"){
+    const text = JSON.stringify({tasks: state.tasks, settings: state.settings}, null, 2);
+    try { await navigator.clipboard.writeText(text); el.textContent = "Скопировано"; setTimeout(() => render(), 1500); }
+    catch (err) { alert("Скопируйте вручную:\n\n" + text.slice(0, 2000)); }
+    return;
+  }
+  if (act === "download" && downloads){
+    try {
+      await downloads.save({filename: "zadaniya-" + todayISO() + ".json",
+        data: JSON.stringify({tasks: state.tasks, settings: state.settings}, null, 2)});
+    } catch (err) { /* отказ пользователя — ничего не делаем */ }
+    return;
+  }
+  if (act === "wipe"){
+    if (!confirm("Удалить все задания без возможности вернуть?")) return;
+    const ids = state.tasks.map(t => t.id);
+    state.tasks = [];
+    state.usingDemo = false;
+    saveLocal();
+    render();
+    if (db) for (const id of ids){ try { await db.doc("tasks/" + id).delete(); } catch (err) {} }
+    return;
+  }
+});
+
+view.addEventListener("change", e => {
+  const el = e.target.closest("[data-act]");
+  if (!el) return;
+  if (el.dataset.act === "cap"){
+    const cap = state.settings.capacity.slice();
+    cap[+el.dataset.i] = Math.max(0, Math.min(12, parseFloat(el.value) || 0));
+    return putSettings({capacity: cap});
+  }
+  if (el.dataset.act === "remtime") return putSettings({reminderTime: el.value || "18:00"});
+  if (el.dataset.act === "daystart") return putSettings({dayStart: el.value || "09:00"});
+  if (el.dataset.act === "dayend") return putSettings({dayEnd: el.value || "22:00"});
+  if (el.dataset.act === "gap") return putSettings({gap: Math.max(0, Math.min(120, parseInt(el.value, 10) || 0))});
+  if (el.dataset.act === "maxblock") return putSettings({maxBlock: Math.max(0.5, parseFloat(el.value) || 2.5)});
+  if (el.dataset.act === "toggle-row"){
+    const i = +el.dataset.i;
+    if (el.checked) delete state.importSkipped[i]; else state.importSkipped[i] = true;
+    return render();
+  }
+});
+view.addEventListener("input", e => {
+  if (e.target.id === "importBox") state.importText = e.target.value;
+  if (e.target.id === "schedBox") state.schedText = e.target.value;
+});
+
+/* примеры материализуются в настоящие задания при первом действии */
+function materialize(next){
+  if (next.demo){
+    const real = state.tasks.map(t => ({...t, id: t.demo ? newId() : t.id, demo: false}));
+    const idx = state.tasks.findIndex(t => t.id === next.id);
+    state.tasks = real;
+    state.usingDemo = false;
+    const target = {...real[idx], ...next, id: real[idx].id, demo: false};
+    state.tasks[idx] = target;
+    render();
+    saveLocal();
+    if (db) for (const t of state.tasks){ const {id, ...body} = t; db.doc("tasks/" + id).set(body).catch(() => {}); }
+    return;
+  }
+  return putTask(next);
+}
+
+function commitImport(){
+  const rows = state.importRows || [];
+  const add = rows.filter((r, i) => r.ok && !state.importSkipped[i]);
+  if (!add.length) return;
+  if (state.usingDemo){ state.tasks = []; state.usingDemo = false; }
+  for (const r of add){
+    putTask({
+      id: newId(), subject: r.subject, title: r.title, type: r.type,
+      deadline: r.deadline, hours: r.hours, done: 0,
+      priority: "normal", status: "active", createdAt: todayISO()
+    });
+  }
+  state.importRows = null;
+  state.importText = "";
+  state.tab = "today";
+  render();
+}
+
+function tryRestoreBackup(text){
+  const t = text.trim();
+  if (!t.startsWith("{") && !t.startsWith("[")) return false;
+  let data;
+  try { data = JSON.parse(t); } catch (e) { return false; }
+  const tasks = Array.isArray(data) ? data : data.tasks;
+  if (!Array.isArray(tasks)) return false;
+  if (!confirm("Это резервная копия на " + tasks.length + " " + plural(tasks.length, "задание", "задания", "заданий") + ". Восстановить?")) return true;
+  state.usingDemo = false;
+  for (const t2 of tasks){
+    if (!t2 || !t2.title || !t2.deadline) continue;
+    putTask({...t2, id: t2.id || newId(), demo: false});
+  }
+  if (data && data.settings) putSettings(data.settings);
+  state.importText = "";
+  state.importRows = null;
+  state.tab = "today";
+  render();
+  return true;
+}
+
+/* ====================== диалог ====================== */
+const dlg = document.getElementById("taskDialog");
+const form = document.getElementById("taskForm");
+const fType = document.getElementById("f-type");
+fType.innerHTML = TYPES.map(t => '<option value="' + t.id + '">' + t.label + "</option>").join("");
+let editingId = null;
+
+function openDialog(task){
+  editingId = task ? task.id : null;
+  document.getElementById("dlgTitle").textContent = task ? "Задание" : "Новое задание";
+  document.getElementById("f-title").value = task ? task.title : "";
+  document.getElementById("f-subject").value = task ? (task.subject || "") : "";
+  fType.value = task ? (task.type || "other") : "hw";
+  document.getElementById("f-deadline").value = task ? task.deadline : addDays(todayISO(), 7);
+  document.getElementById("f-hours").value = task ? (Number(task.hours) || 2) : 2;
+  document.getElementById("f-done").value = task ? (Number(task.done) || 0) : 0;
+  document.getElementById("f-priority").value = task ? (task.priority || "normal") : "normal";
+  document.getElementById("f-delete").hidden = !task;
+  dlg.showModal();
+  document.getElementById("f-title").focus();
+}
+document.getElementById("f-cancel").addEventListener("click", () => dlg.close());
+document.getElementById("f-delete").addEventListener("click", () => {
+  const task = state.tasks.find(t => t.id === editingId);
+  if (task && confirm("Удалить «" + task.title + "»?")){ dlg.close(); dropTask(task.id); }
+});
+fType.addEventListener("change", () => {
+  if (!editingId){
+    const hours = document.getElementById("f-hours");
+    hours.value = (TYPE_BY_ID[fType.value] || TYPE_BY_ID.other).hours;
+  }
+});
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  const hours = Math.max(0.5, parseFloat(document.getElementById("f-hours").value) || 2);
+  const doneH = Math.max(0, Math.min(hours, parseFloat(document.getElementById("f-done").value) || 0));
+  const existing = state.tasks.find(t => t.id === editingId);
+  const next = {
+    id: editingId || newId(),
+    subject: document.getElementById("f-subject").value.trim() || "Без предмета",
+    title: document.getElementById("f-title").value.trim(),
+    type: fType.value,
+    deadline: document.getElementById("f-deadline").value,
+    hours, done: doneH,
+    priority: document.getElementById("f-priority").value,
+    status: existing && existing.status === "done" && doneH >= hours ? "done" : "active",
+    createdAt: existing ? (existing.createdAt || todayISO()) : todayISO()
+  };
+  if (!next.title || !next.deadline) return;
+  dlg.close();
+  if (state.usingDemo){ state.tasks = []; state.usingDemo = false; }
+  putTask(next);
+});
+
+/* ---- диалог пары ---- */
+const clsDlg = document.getElementById("classDialog");
+const clsForm = document.getElementById("classForm");
+const cDay = document.getElementById("c-day");
+cDay.innerHTML = WD_FULL.map((d, i) => '<option value="' + i + '">' + d[0].toUpperCase() + d.slice(1) + "</option>").join("");
+let editingClassId = null;
+
+function openClassDialog(c){
+  editingClassId = c ? c.id : null;
+  document.getElementById("clsTitle").textContent = c ? "Пара" : "Новая пара";
+  document.getElementById("c-title").value = c ? c.title : "";
+  document.getElementById("c-place").value = c ? (c.place || "") : "";
+  cDay.value = c ? c.day : wdIndex(todayISO());
+  document.getElementById("c-start").value = c ? c.start : "08:30";
+  document.getElementById("c-end").value = c ? c.end : "10:05";
+  document.getElementById("c-delete").hidden = !c;
+  clsDlg.showModal();
+  document.getElementById("c-title").focus();
+}
+document.getElementById("c-cancel").addEventListener("click", () => clsDlg.close());
+document.getElementById("c-delete").addEventListener("click", () => {
+  clsDlg.close();
+  putSettings({schedule: (state.settings.schedule || []).filter(x => x.id !== editingClassId)});
+});
+clsForm.addEventListener("submit", e => {
+  e.preventDefault();
+  const start = document.getElementById("c-start").value;
+  const end = document.getElementById("c-end").value;
+  const title = document.getElementById("c-title").value.trim();
+  if (!title || toMin(end) <= toMin(start)) return;
+  const item = {
+    id: editingClassId || newId(),
+    day: +cDay.value,
+    start, end, title,
+    place: document.getElementById("c-place").value.trim()
+  };
+  const list = (state.settings.schedule || []).filter(x => x.id !== item.id);
+  list.push(item);
+  clsDlg.close();
+  putSettings({schedule: list});
+});
+
+/* ====================== напоминания ====================== */
+function notifySupported(){
+  try { return typeof Notification !== "undefined"; } catch (e) { return false; }
+}
+async function askNotifications(){
+  if (!notifySupported()){ state.notifyState = "unsupported"; return render(); }
+  try {
+    const res = await Notification.requestPermission();
+    state.notifyState = res === "granted" ? "granted" : res === "denied" ? "denied" : "unknown";
+    if (res === "granted") showNotification("Напоминания включены", "В " + state.settings.reminderTime + " покажу, что делать сегодня.");
+  } catch (e) { state.notifyState = "unsupported"; }
+  render();
+}
+function showNotification(title, body){
+  try { new Notification(title, {body}); } catch (e) { /* заблокировано — баннер на странице уже есть */ }
+}
+function todayDigest(){
+  const plan = buildPlan(state.tasks, state.settings);
+  const day = plan.byDate[plan.start];
+  if (!day || !day.blocks.length) return null;
+  return {
+    total: day.used,
+    text: day.blocks.map(b => (blockTimeLabel(b) ? blockTimeLabel(b) + " " : "") +
+      b.task.subject + " — " + b.task.title + " (" + fmtHours(b.hours) + ")").join("; ")
+  };
+}
+function reminderTick(){
+  if (state.notifyState !== "granted") return;
+  const now = new Date();
+  const [h, m] = String(state.settings.reminderTime || "18:00").split(":").map(Number);
+  const stamp = todayISO();
+  let last = null;
+  try { last = localStorage.getItem("snowball.lastNotify"); } catch (e) {}
+  if (last === stamp) return;
+  if (now.getHours() * 60 + now.getMinutes() < (h * 60 + m)) return;
+  const digest = todayDigest();
+  if (!digest) return;
+  showNotification("Сегодня по плану " + fmtHours(digest.total), digest.text);
+  try { localStorage.setItem("snowball.lastNotify", stamp); } catch (e) {}
+}
+
+/* ====================== старт ====================== */
+(function start(){
+  if (notifySupported()){
+    try { state.notifyState = Notification.permission; } catch (e) { state.notifyState = "unsupported"; }
+  } else state.notifyState = "unsupported";
+
+  const had = loadLocal();
+  if (!had) seedDemoIfEmpty();
+  render();
+  connectStore();
+
+  setInterval(reminderTick, 60000);
+  setTimeout(reminderTick, 4000);
+
+  let lastDay = todayISO();
+  setInterval(() => {
+    if (todayISO() !== lastDay){ lastDay = todayISO(); render(); }
+  }, 60000);
+})();
+</script>
